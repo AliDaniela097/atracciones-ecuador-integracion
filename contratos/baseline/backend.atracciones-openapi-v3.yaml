@@ -1,0 +1,3298 @@
+openapi: 3.0.3
+info:
+  title: API de Integración y Catálogo de Atracciones Turísticas (Booking Prototipo RDA2 — OpenAPI v3 Canónico)
+  version: 3.1.0
+  description: |
+    # Contrato Oficial de Integración v3.1.0 — Vertical de Atracciones Turísticas (RDA2 - Semana 9)
+    
+    > **Sistema Emisor / Proveedor:** Descubre EC (Sistema de Atracciones Turísticas del Ecuador — Dilan Mendoza)  
+    > **Sistema Consumidor / Agregador Central:** Booking Prototipo (Marketplace Multimodal — Paúl Rosero)  
+    > **Asignatura:** Integración de Sistemas — 6to Semestre (Reto 2: RDA2)  
+    > **Estándar:** OpenAPI Specification 3.0.3 (API-First, REST HATEOAS Nivel 3, RFC 7807 Problem Details)  
+    > **Documento de Origen:** `contracts/atracciones-openapi-v2.yaml`  
+    > **Fecha de Emisión Oficial:** Octubre 2026  
+
+    ---
+
+    ## 1. Propósito y Alcance del Contrato v2.0.0
+    Este contrato formaliza la interfaz de programación de aplicaciones (API) para la **integración bidireccional** entre la tienda externa de Atracciones Turísticas y el agregador **Booking Prototipo**. Provee las especificaciones rigurosas y exhaustivas para que los agentes inteligentes y desarrolladores de cada equipo construyan, validen y consuman los servicios web sin ambigüedades.
+
+    ### Características Principales Implementadas:
+    1. **Taxonomía Jerárquica Recursiva de Categorías:** Endpoint `/atracciones/categorias/arbol` con auto-referencia y banderas de inclusiones obligatorias de la cátedra:
+       - 🍽️ `incluye_comida`: Degustaciones, refrigerios o almuerzos incluidos.
+       - 🚌 `incluye_transporte`: Traslado terrestre ida/vuelta o bus panorámico.
+       - 🗣️ `incluye_guia`: Guía acreditado con especificación de idiomas.
+    2. **Ficha Técnica Detallada y Enriquecida:** Endpoint `GET /atracciones/{id}` con itinerario cronológico paso a paso, valoraciones desglosadas por pilares (Limpieza, Servicio, Calidad-Precio), punto de encuentro geoespacial (coordenadas GPS) y admisión de animales de servicio.
+    3. **Disponibilidad Dinámica de Turnos Horarios (*Time Slots*):** Endpoint `GET /atracciones/{id}/disponibilidad` con aforo remanente en tiempo real (`DISPONIBLE`, `ULTIMOS_CUPOS`, `AGOTADO`).
+    4. **Desglose Tarifario por Grupo de Edad:** Cuatro tipos de boleto con tarificación transparente: Adulto, Niño (50% desc.), Senior (tarifa tercera edad) y Bebé/Infante ($0 pero con reserva legal de cupo).
+    5. **Contrato Obligatorio de Compra y Sagas Distribuidas:** Endpoint `POST /atracciones/reservas` con respuesta síncrona formal:
+       - `201 Created`: Compra exitosa con `external_order_id`, código PNR y voucher QR.
+       - `409 Conflict`: **Contrato Obligatorio de Falta de Stock** (`OUT_OF_STOCK`), activando la Saga de compensación en orden inverso (LIFO).
+    6. **Check-in Presencial en Punto de Encuentro:** Endpoint `POST /atracciones/reservas/{id}/checkin` para validación física de identidad del titular por el guía turístico antes del abordaje.
+    7. **Políticas B2B de Combos y Descuentos:** Endpoint `GET /atracciones/promociones/contrato` que define la aceptación de paquetes turísticos y el porcentaje máximo de descuento comercial.
+    8. **Observabilidad, Trazabilidad y Outbox EDA:** Feed de eventos Outbox `/atracciones/eventos`, cabeceras obligatorias `X-Correlation-Id`, `Idempotency-Key` y endpoint de salud `/atracciones/health` para el tablero de monitoreo tipo grafo (🟢 Foco Verde / 🔴 Foco Rojo).
+
+    
+    ## 1.1. Resoluciones y Decisiones Oficiales de Arquitectura v3.0.0 (Semana 9)
+    Conforme a lo dictado en **Indicaciones semana 9.md** y las consideraciones de integración con los 5 compañeros:
+    
+    1. **Estandarización 100% en Inglés (Unificación Lingüística):**
+       - Se suprimen las duplicidades de campos obligatorios en español. Todos los esquemas canónicos de entrada y salida establecen sus propiedades requeridas en **inglés** (`name`, `short_description`, `price`, `date`, `time`, `slot_id`, `adult_count`, `customer`, etc.).
+       - Los atributos en español se conservan como alias opcionales en el backend para máxima tolerancia con código preexistente (*Ley de Postel: Sé estricto en lo que emites, tolerante en lo que recibes*).
+    
+    2. **Resolución de la Ambigüedad en Checkout (`slot_id` vs `time`):**
+       - Se define formalmente que el **`slot_id` es la clave primaria de bloqueo atómico de aforo** en la base de datos (ej. `slot-20261025-1030`).
+       - Los campos informativos `date` y `time` deben coincidir con dicho turno. Si el integrador envía un `slot_id` cuya fecha/hora difiere de los campos enviados, Booking rechazará la solicitud inmediatamente con **`400 Bad Request`** (`code: SLOT_TIME_MISMATCH`), garantizando integridad transaccional absoluta.
+    
+    3. **Contrato Riguroso de Errores para Sagas Distribuidas:**
+       - **`400 Bad Request`:** Error sintáctico o inconsistencia (`SLOT_TIME_MISMATCH`, JSON inválido, tipos de datos erróneos).
+       - **`422 Unprocessable Entity`:** Error de validación semántica previa (fecha en el pasado, `adult_count < 1`). **No activa compensación de Saga** porque no se inició el cobro.
+       - **`409 Conflict` con `code: OUT_OF_STOCK`:** Conflicto concurrente de aforo agotado. **ÚNICO DETONADOR OFICIAL para que el orquestador de Booking dispare la compensación LIFO** (reversar cobros, cancelar vuelos/hoteles asociados).
+    
+    4. **Asimetría de Comunicación Híbrida (gRPC Inbound vs REST Outbound):**
+       - **Tiendas de Atracciones ➔ Booking:** Transmiten variaciones de cupos en tiempo real mediante canal binario **gRPC Inbound** (puerto 50051, contrato `src/proto/inventory.proto`, servicio `inventory.InventoryStockService`).
+       - **Booking ➔ Tiendas de Atracciones:** Cuando un usuario final compra en Booking, el ESB despacha la orden mediante **REST Outbound** (`POST /reservas`) a la `baseUrlRest` del socio correspondiente registrada en `schema_proveedores.config_proveedor`.
+
+
+    ## 1.2. Historial de cambios del contrato (SemVer)
+    * **3.1.0 (MINOR, retrocompatible):** se agregan, SIN modificar ningún campo existente, los endpoints de la tienda para autenticación de usuarios y panel de administración (`/auth/*`, `/admin/*`, etiquetas «Extensión de la tienda»); Booking no los consume. Todos los listados nuevos usan la misma paginación (`page`, `limit`, `metadata`).
+    * **3.0.1 (PATCH):** se corrigen claves YAML duplicadas (`slot_id`, `time`, `time_24h`) en `TimeSlotItem`; el archivo original no podía cargarse con parsers YAML estrictos (p. ej. js-yaml). Se corrige la sección 2.2 (proto desactualizado).
+    * Reglas añadidas por la implementación (aclaraciones, no rompen compatibilidad): `409` con `code` `IDEMPOTENCY_KEY_REUSED` / `IDEMPOTENCY_IN_PROGRESS` en `POST /reservas`; `409` `CANCELLATION_NOT_ALLOWED` / `CANCELLATION_WINDOW_EXPIRED` / `RESERVATION_NOT_CANCELLABLE` en `/cancel`; `403` si el documento del check-in no coincide; `400 INVALID_DESTINATION` en el PUT de promociones si el destino no es una ciudad con aeropuerto atendida.
+
+    ---
+
+    ## 2. Arquitectura de Comunicación Híbrida: REST vs. gRPC (Consideraciones RDA2)
+    Conforme a lo exigido en las Consideraciones RDA2 y la Semana 8:
+    * **Compras y Transacciones (ÚNICAMENTE REST):** La interacción de usuario, exploración de catálogo, checkout orquestado, check-in presencial, descarga de comprobantes y consultas administrativas se realizan EXCLUSIVAMENTE mediante peticiones HTTP RESTful bajo este contrato OpenAPI v2.
+    * **Sincronización de Stock e Inventario (OBLIGATORIAMENTE gRPC sobre HTTP/2 — Puerto 50051):** Las tiendas individuales DEBEN transmitir sus variaciones de cupos y disponibilidad hacia Booking Prototipo a través de un canal gRPC de alto rendimiento, permitiendo ingesta continua en memoria RAM sin sobrecargar la base de datos relacional.
+
+    ### 2.1. Sincronización en Tiempo Real con Base de Datos Relacional (gRPC ➔ PostgreSQL ➔ REST)
+    Para dar total garantía de consistencia transaccional y evitar discrepancias entre canales:
+    1. Cada evento recibido por gRPC (`PushStockUpdate` o `StreamInventoryChanges`) actualiza de forma inmediata y atómica el registro correspondiente en la tabla relacional `schema_atracciones.turnos_aforo`.
+    2. La consulta REST `GET /atracciones/{id}/disponibilidad` consulta directamente dicha tabla con nivel de aislamiento `READ COMMITTED`, garantizando que cualquier cambio enviado por gRPC se refleje instantáneamente en la interfaz de usuario y en el motor de reservas.
+    3. Al crearse una reserva vía `POST /atracciones/reservas`, el microservicio aplica un bloqueo pesimista/optimista transaccional (ACID), descontando los cupos correspondientes y emitiendo el evento Outbox.
+
+    ### 2.2. Especificación Oficial de Envío de Stock por gRPC
+    Para dar cumplimiento al Criterio Excluyente (CE01) y a la directriz de sincronización en tiempo real:
+    1. **Endpoint Inbound de Ingesta:** `grpc://booking.epn.edu.ec:50051` (En entorno de desarrollo local: `localhost:50051`).
+    2. **Protocolo de Transporte:** HTTP/2 multiplexado binario (cleartext h2c en red interna / Docker, TLS en producción pública).
+    3. **Servicio Protobuf:** `inventory.InventoryStockService`.
+    4. **Métodos RPC Habilitados:**
+       - `rpc PushStockUpdate (StockUpdateMessage) returns (StockUpdateAck);` (Envío puntual obligatorio ante cada venta, anulación o recarga de aforo).
+       - `rpc StreamInventoryChanges (stream StockChangeEvent) returns (StreamSummary);` (Streaming continuo de deltas de inventario para alta concurrencia).
+    5. **Contrato Protobuf Oficial:** el archivo vigente es `contracts/proto/inventory.proto` (v3, con `slot_id`, `GetSlotAvailability`, `StockUpdateAck.error_code` y `current_available`). La copia en texto que aparecía aquí estaba desactualizada y se eliminó para evitar discrepancias (fuente única de verdad).
+       > **Nota de unicidad:** `slot_id` (`slot-YYYYMMDD-HHMM`) codifica fecha y hora pero NO la atracción; la clave de un turno es el par (`item_id`, `slot_id`).
+
+    ---
+
+    ## 3. Mandato de Cátedra RDA2: Cuestionario B2B de Acuerdo de Promociones y Combos
+    Conforme a lo dictado expresamente por la cátedra en las Consideraciones RDA2 (Página 149):
+    > *"En el contrato con los partners se solicita una sola vez: si acepta hacer promociones y cuál es el porcentaje máximo de descuento que estaría dispuesto a aplicar."*
+
+    Para formalizar esta alianza comercial y permitir a Booking estructurar paquetes combinados (ej. Tour + Hotel + Vuelo):
+    * **Consulta del Acuerdo Vigente:** `GET /atracciones/promociones/contrato` retorna los términos pactados actualmente.
+    * **Declaración / Formalización Obligatoria:** `PUT /atracciones/promociones/contrato` permite a la tienda socia (o a su agente inteligente) responder oficialmente a las preguntas de la cátedra:
+      1. `permite_promociones` (boolean): ¿Acepta participar en la creación de promociones y combos de paquetes turísticos multidominio con Booking Prototipo?
+      2. `porcentaje_descuento_maximo` (number): Si acepta, ¿cuál es el porcentaje máximo de descuento que autoriza aplicar sobre la tarifa pública base (ej. 15.0%)?
+      3. `destinos_habilitados` (array): Lista de ciudades o destinos donde aplica la promoción (ej. `["Quito", "Baños", "Cuenca", "Galápagos"]`).
+      4. `vigencia_hasta` (date): Fecha hasta la cual se garantiza la vigencia del acuerdo comercial.
+      5. `condiciones_combo` (string): Restricciones y términos de aplicación (ej. compra anticipada de 48 horas).
+
+    ---
+
+    ## 4. Protocolo de Errores Estandarizado (RFC 7807 Problem Details)
+    Todas las respuestas de error utilizan el formato estándar `application/problem+json` con la estructura:
+    ```json
+    {
+      "type": "https://booking.epn.edu.ec/errors/sin-cupos",
+      "title": "Cupos Agotados para el Turno Horario",
+      "status": 409,
+      "detail": "No existen suficientes cupos disponibles en el turno seleccionado (10:30 a.m.). Cupos restantes: 1, solicitados: 2.",
+      "instance": "/api/v3/atracciones/reservas",
+      "code": "OUT_OF_STOCK",
+      "correlation_id": "cid-8821a",
+      "timestamp": "2026-10-21T16:44:01Z"
+    }
+    ```
+
+servers:
+  - url: /api/v3
+    description: API Gateway Booking Prototipo — Ruta base canónica v3 (Producción / Local)
+  - url: https://rda1-backend-integracion-sistemas.onrender.com/api/v3
+    description: Servidor de Producción Central Desplegado en Render (HTTPS)
+  - url: http://localhost:3000/api/v3
+    description: Entorno de Desarrollo Local del Gateway NestJS (v3)
+  - url: /api/v2
+    description: Ruta de Compatibilidad v2 (Mantenida activa para integradores existentes)
+  - url: /api/v1
+    description: Ruta Legacy v1 (Compatibilidad hacia atrás)
+
+security:
+  - BearerAuth: []
+  - ApiKeyAuth: []
+
+tags:
+  - name: Atracciones - Catálogo y Búsqueda v2
+    description: Endpoints de exploración de experiencias, búsqueda con filtros avanzados y taxonomía jerárquica de categorías.
+  - name: Atracciones - Disponibilidad y Turnos Horarios v2
+    description: Consulta en tiempo real de franjas horarias (Time Slots) y control de aforo por fecha.
+  - name: Atracciones - Reservas y Coordinación Saga v2
+    description: Orquestación transaccional de compras, contratos de respuesta para Sagas (201 Created / 409 Conflict) y compensaciones LIFO.
+  - name: Atracciones - Check-in Presencial y Postventa v2
+    description: Check-in presencial con validación de identidad del titular por el guía, canje de voucher QR y sincronización de calendario (.ICS).
+  - name: Atracciones - Promociones B2B y Combos v2
+    description: Consulta de acuerdos comerciales para paquetes turísticos y porcentaje de descuento máximo.
+  - name: Atracciones - Outbox EDA y Telemetría de Nodo v2
+    description: Feed de eventos asíncronos Outbox para streaming hacia Kafka/RabbitMQ y telemetría de salud de nodo (Semáforo 🟢/🔴).
+  - name: Extensión de la tienda - Autenticación
+    description: Registro e inicio de sesión de usuarios (JWT). No es consumido por Booking.
+  - name: Extensión de la tienda - Administración
+    description: Panel del administrador (rol ADMIN). Todos los listados son paginados con `page` y `limit`.
+
+paths:
+  /atracciones/categorias/arbol:
+    get:
+      tags:
+        - Atracciones - Catálogo y Búsqueda v2
+      summary: Consultar árbol jerárquico recursivo de categorías (Taxonomía padre-hija)
+      security: []
+      description: |
+        Retorna la estructura en árbol de las categorías turísticas con soporte multinivel (implementado mediante `@Tree('closure-table')` o autorreferencia `cat_padre_id`).
+        Cada nodo incluye de forma obligatoria los atributos de inclusión exigidos por la cátedra:
+        * `incluye_comida`: Almuerzos, cenas, degustaciones de chocolate o catas de café.
+        * `incluye_transporte`: Recogida en hotel, transporte turístico privado o bus panorámico.
+        * `incluye_guia`: Acompañamiento de guía turístico oficial certificado.
+      parameters:
+        - $ref: '#/components/parameters/XCorrelationIdHeader'
+      responses:
+        '200':
+          description: Árbol recursivo de categorías recuperado exitosamente.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryTreeNode'
+              example:
+                - id: "cat-tours-100"
+                  nombre: "Tours y Experiencias Guiadas"
+                  slug: "tours-experiencias"
+                  descripcion: "Actividades de inmersión cultural y natural con guías expertos."
+                  icono: "compass"
+                  incluye_comida: false
+                  incluye_transporte: true
+                  incluye_guia: true
+                  orden: 1
+                  subcategorias:
+                    - id: "cat-tours-201"
+                      nombre: "Tours Gastronómicos y Catas"
+                      slug: "tours-gastronomicos"
+                      descripcion: "Degustaciones de comida típica ecuatoriana y chocolate fino de aroma."
+                      icono: "utensils"
+                      incluye_comida: true
+                      incluye_transporte: false
+                      incluye_guia: true
+                      orden: 1
+                      subcategorias: []
+                    - id: "cat-tours-202"
+                      nombre: "Excursiones a Volcanes y Aventura"
+                      slug: "volcanes-aventura"
+                      descripcion: "Senderismo y expediciones al Cotopaxi, Chimborazo y Quilotoa."
+                      icono: "mountain"
+                      incluye_comida: true
+                      incluye_transporte: true
+                      incluye_guia: true
+                      orden: 2
+                      subcategorias: []
+                - id: "cat-cultura-200"
+                  nombre: "Museos y Sitios Arqueológicos"
+                  slug: "museos-cultura"
+                  descripcion: "Entradas directas a patrimonios y centros históricos."
+                  icono: "landmark"
+                  incluye_comida: false
+                  incluye_transporte: false
+                  incluye_guia: false
+                  orden: 2
+                  subcategorias: []
+        '500':
+          $ref: '#/components/responses/ProblemDetails500'
+
+  /atracciones/categorias:
+    get:
+      tags:
+        - Atracciones - Catálogo y Búsqueda v2
+      summary: Consultar catálogo plano de categorías con filtro por padre
+      description: |
+        Retorna la lista plana de categorías. Permite filtrar por `padre_id` para construir componentes visuales tipo tabs o menús desplegables sin procesar recursión en cliente.
+      security: []
+      parameters:
+        - name: padre_id
+          in: query
+          required: false
+          description: ID de la categoría padre para listar únicamente sus hijas directas. Si se omite, retorna todas las categorías raíz.
+          schema:
+            type: string
+          example: "cat-tours-100"
+        - $ref: '#/components/parameters/XCorrelationIdHeader'
+      responses:
+        '200':
+          description: Listado plano de categorías.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryFlat'
+        '500':
+          $ref: '#/components/responses/ProblemDetails500'
+
+  /atracciones/search:
+    post:
+      tags:
+        - Atracciones - Catálogo y Búsqueda v2
+      summary: Búsqueda avanzada y filtrado de experiencias turísticas
+      description: |
+        Permite a los usuarios buscar y filtrar atracciones por destino geográfico, fechas de viaje, franja presupuestaria, árbol de categorías y atributos específicos de confort (comida, transporte, accesibilidad).
+        Si no se especifica una fecha puntual, el endpoint retorna las atracciones activas indicando el precio base referencial (*"Desde US$ XX por adulto"*).
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/XCorrelationIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchAtraccionesRequestV2'
+      responses:
+        '200':
+          description: Resultados de búsqueda obtenidos con paginación y metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchAtraccionesResponseV2'
+        '400':
+          $ref: '#/components/responses/ProblemDetails400'
+        '500':
+          $ref: '#/components/responses/ProblemDetails500'
+
+  /atracciones:
+    get:
+      tags:
+        - Atracciones - Catálogo y Búsqueda v2
+      summary: Listado paginado de atracciones turísticas
+      description: Consulta el catálogo general de atracciones turísticas mediante parámetros en la URL.
+      security: []
+      parameters:
+        - name: city
+          in: query
+          required: false
+          description: Nombre de la ciudad turística (ej. Quito, Baños, Cuenca, Galápagos).
+          schema:
+            type: string
+          example: "Quito"
+        - name: categoria_id
+          in: query
+          required: false
+          description: Identificador de la categoría deseada.
+          schema:
+            type: string
+        - name: incluye_comida
+          in: query
+          required: false
+          description: Filtrar solo atracciones que incluyan alimentación.
+          schema:
+            type: boolean
+        - name: incluye_transporte
+          in: query
+          required: false
+          description: Filtrar solo atracciones que incluyan traslado.
+          schema:
+            type: boolean
+        - name: incluye_guia
+          in: query
+          required: false
+          description: Filtrar solo experiencias con guía acreditado.
+          schema:
+            type: boolean
+        - name: page
+          in: query
+          required: false
+          description: Número de página (1-indexed).
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          required: false
+          description: Cantidad de resultados por página.
+          schema:
+            type: integer
+            default: 10
+            maximum: 50
+        - name: sort
+          in: query
+          required: false
+          description: Criterio de ordenamiento.
+          schema:
+            type: string
+            enum: [PRICE_ASC, PRICE_DESC, RATING_DESC, POPULARITY]
+            default: POPULARITY
+        - $ref: '#/components/parameters/XCorrelationIdHeader'
+      responses:
+        '200':
+          description: Listado de experiencias turísticas recuperado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchAtraccionesResponseV2'
+        '400':
+          $ref: '#/components/responses/ProblemDetails400'
+        '500':
+          $ref: '#/components/responses/ProblemDetails500'
+
+  /atracciones/{id}:
+    get:
+      tags:
+        - Atracciones - Catálogo y Búsqueda v2
+      summary: Consultar detalle técnico completo de una atracción por ID o Slug
+      description: |
+        Retorna la ficha enriquecida de la experiencia turística con:
+        * Desglose analítico de puntuaciones (*ratings breakdown* en Limpieza, Servicio y Calidad-Precio).
+        * Itinerario cronológico secuencial de hitos con tiempos de permanencia.
+        * Punto de encuentro geoespacial con coordenadas GPS y dirección física.
+        * Atributos de accesibilidad física y admisión de animales de servicio.
+        * Políticas de cancelación gratuita y plazo límite antes de la actividad.
+        * Parámetros para la integración en paquetes turísticos y combos dinámicos (`permite_paquete`).
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identificador alfanumérico único (UUID o Slug de la atracción).
+          schema:
+            type: string
+          example: "PRhu4UBTWPBC"
+        - $ref: '#/components/parameters/XCorrelationIdHeader'
+      responses:
+        '200':
+          description: Ficha completa de la atracción recuperada exitosamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AtraccionDetailResponseV2'
+        '404':
+          $ref: '#/components/responses/ProblemDetails404'
+        '500':
+          $ref: '#/components/responses/ProblemDetails500'
+
+  /atracciones/{id}/disponibilidad:
+    get:
+      tags:
+        - Atracciones - Disponibilidad y Turnos Horarios v2
+      summary: Consultar turnos horarios (Time Slots) y aforo disponible en tiempo real
+      description: |
+        ### Consulta Canónica de Disponibilidad de Turnos y Aforo en Tiempo Real (RDA2)
+        Permite consultar las franjas horarias operativas de una atracción turística para una fecha específica (`date` o `fecha`).
+        Retorna la matriz de turnos horarios con identificador unívoco de franja (`slot_id`, ej. `slot-20261025-1030`), hora en formato 24 horas (`time_24h` / `hora_24h`, ej. `10:30:00`) y etiqueta legible (`10:30 a.m.`).
+        
+        Estados de Aforo Operativo:
+        * `DISPONIBLE`: Turno con aforo suficiente para reserva.
+        * `ULTIMOS_CUPOS`: Quedan 3 o menos cupos (activa alerta visual de escasez en el marketplace).
+        * `AGOTADO`: Aforo completo (0 cupos disponibles, bloqueo preventivo de reserva).
+
+        > **Consistencia en Tiempo Real:** Los cupos son consultados directamente desde la tabla PostgreSQL `schema_atracciones.turnos_aforo`, la cual se mantiene sincronizada con la ingesta gRPC (puerto 50051) y los bloqueos transaccionales de reservas activas.
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identificador de la atracción turística (ej. `PRhu4UBTWPBC`).
+          schema:
+            type: string
+          example: "PRhu4UBTWPBC"
+        - name: date
+          in: query
+          required: true
+          description: Fecha de la actividad en formato ISO 8601 (`YYYY-MM-DD`).
+          schema:
+            type: string
+            format: date
+          example: "2026-10-25"
+        - $ref: '#/components/parameters/XCorrelationIdHeader'
+      responses:
+        '200':
+          description: Matriz de franjas horarias y cupos disponibles recuperada exitosamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisponibilidadResponse'
+        '400':
+          $ref: '#/components/responses/ProblemDetails400'
+        '404':
+          $ref: '#/components/responses/ProblemDetails404'
+        '500':
+          $ref: '#/components/responses/ProblemDetails500'
+        '503':
+          $ref: '#/components/responses/ProblemDetails503'
+
+  /atracciones/reservas:
+    post:
+      tags:
+        - Atracciones - Reservas y Coordinación Saga v2
+      summary: Crear reserva de atracción con contrato formal para Sagas (Ruta canónica)
+      description: |
+        ### Contrato Transaccional Obligatorio de Compra y Sagas Distribuidas
+        Este endpoint ejecuta la confirmación de compra y reserva de boletos en la tienda de atracciones.
+        
+        #### Comportamiento Esperado por el Agregador Booking Prototipo:
+        1. **Respuesta Síncrona Inmediata Obligatoria:** La tienda socia DEBE procesar la reserva y responder formalmente:
+           * **HTTP `201 Created`:** Compra confirmada exitosamente. Retorna el localizador `reservation_code` y el `external_order_id` obligatorio.
+           * **HTTP `409 Conflict`:** **FALTA DE STOCK O TURNO HORARIO AGOTADO (`OUT_OF_STOCK`)**. Este código es el activador estándar que instruye al orquestador de Sagas de Booking a ejecutar las compensaciones en orden inverso (LIFO), devolviendo el dinero al usuario en la pasarela bancaria y liberando reservas previas.
+        2. **Idempotencia Transaccional:** La cabecera `Idempotency-Key` (UUID v4) es **estrictamente obligatoria**. Si se recibe una petición con una clave ya procesada en las últimas 24 horas, el backend DEBE retornar la respuesta idéntica previa sin duplicar cobros ni descontar cupos adicionales.
+        3. **Trazabilidad Distribuida:** La cabecera `X-Correlation-Id` amarra la transacción con los logs físicos y las trazas de RabbitMQ y Apache Kafka.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+        - $ref: '#/components/parameters/XCorrelationIdHeader'
+        - $ref: '#/components/parameters/XNodeIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReservaRequestV3'
+      responses:
+        '201':
+          description: Reserva confirmada exitosamente. Se emiten el código PNR, voucher digital y código QR.
+          headers:
+            Location:
+              description: URL canónica para consultar la reserva creada.
+              schema:
+                type: string
+                example: "/api/v3/atracciones/reservas/res-dec-9921"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservaConfirmadaResponseV2'
+        '400':
+          $ref: '#/components/responses/ProblemDetails400'
+        '409':
+          description: |
+            **CONTRATO OBLIGATORIO DE FALTA DE STOCK (Trigger de Compensación Saga).**  
+            Ocurre cuando el turno horario se quedó sin aforo entre la selección y el checkout, o si existe conflicto de concurrencia.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: "https://booking.epn.edu.ec/errors/sin-cupos"
+                title: "Cupos Agotados para el Turno Solicitado"
+                status: 409
+                detail: "La atracción Tour Baños Aventura Extrema no dispone de 2 cupos para el turno de las 10:30 a.m. del 2026-10-25."
+                instance: "/api/v3/atracciones/reservas"
+                code: "OUT_OF_STOCK"
+                correlation_id: "cid-8821a"
+                timestamp: "2026-10-21T16:44:01Z"
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+        '422':
+          $ref: '#/components/responses/ProblemDetails422'
+        '500':
+          $ref: '#/components/responses/ProblemDetails500'
+        '503':
+          $ref: '#/components/responses/ProblemDetails503'
+
+  /atracciones/reservas/{id}:
+    get:
+      tags:
+        - Atracciones - Reservas y Coordinación Saga v2
+      summary: Consultar detalle y estado de una reserva específica
+      description: Retorna el estado actual de la reserva (`CONFIRMED`, `CHECKED_IN`, `CANCELLED`), los datos de contacto y el voucher QR asociado. Requiere autenticación JWT.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identificador de la reserva (UUID o código PNR).
+          schema:
+            type: string
+          example: "res-dec-9921"
+        - $ref: '#/components/parameters/XCorrelationIdHeader'
+      responses:
+        '200':
+          description: Ficha de la reserva recuperada exitosamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservaConfirmadaResponseV2'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+        '404':
+          $ref: '#/components/responses/ProblemDetails404'
+        '500':
+          $ref: '#/components/responses/ProblemDetails500'
+
+  /atracciones/reservas/{id}/cancel:
+    post:
+      tags:
+        - Atracciones - Reservas y Coordinación Saga v2
+      summary: Cancelar reserva de atracción turística (Acción de Compensación Saga)
+      description: |
+        ### Endpoint de Compensación y Rollback (Sagas LIFO)
+        Permite anular una reserva confirmada y **reintegrar de inmediato los cupos al aforo disponible**.
+        Este endpoint es invocado en dos escenarios:
+        1. **Cancelación Voluntaria del Cliente:** Dentro del plazo de cancelación gratuita (ej. hasta 24 horas antes).
+        2. **Acción Compensatoria de Saga (`RestaurarInventario`):** Cuando la compra de un paquete falla en un servicio posterior (ej. error en hotel o aerolínea), el orquestador de Booking ejecuta este POST para liberar los cupos y dejar el sistema en estado consistente.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identificador de la reserva a cancelar.
+          schema:
+            type: string
+          example: "res-dec-9921"
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+        - $ref: '#/components/parameters/XCorrelationIdHeader'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelReservationRequest'
+      responses:
+        '200':
+          description: Reserva cancelada exitosamente y cupos reintegrados al aforo del turno.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservaConfirmadaResponseV2'
+        '400':
+          $ref: '#/components/responses/ProblemDetails400'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+        '404':
+          $ref: '#/components/responses/ProblemDetails404'
+        '409':
+          $ref: '#/components/responses/ProblemDetails409'
+        '500':
+          $ref: '#/components/responses/ProblemDetails500'
+
+  /atracciones/reservas/{id}/checkin:
+    post:
+      tags:
+        - Atracciones - Check-in Presencial y Postventa v2
+      summary: Realizar Check-in presencial en punto de encuentro con validación de identidad e idempotencia
+      description: |
+        ### Proceso de Check-in Presencial Exigido por la Cátedra (Consideraciones RDA2 §4)
+        Valida la presentación física del turista en el punto de encuentro mediante escaneo de su código QR y verificación de cédula o pasaporte.
+        Al validarse, la reserva transiciona a estado `CHECKED_IN`, se registra la fecha/hora UTC exacta de asistencia y se habilita el pase de abordar digital con el guía asignado.
+
+        > **Garantía de Idempotencia en Escaneo Móvil:** La cabecera `Idempotency-Key` garantiza que lecturas múltiples accidentales o reintentos por red móvil inestable retornen el pase de abordar ya emitido (HTTP 200) sin disparar conflictos artificiales (HTTP 409).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID de la reserva a la cual se le realizará el check-in.
+          schema:
+            type: string
+          example: "res-dec-9921"
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+        - $ref: '#/components/parameters/XCorrelationIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckinRequest'
+      responses:
+        '200':
+          description: Check-in presencial verificado y pase de abordar emitido exitosamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckinResponse'
+        '400':
+          $ref: '#/components/responses/ProblemDetails400'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+        '404':
+          $ref: '#/components/responses/ProblemDetails404'
+        '409':
+          description: Conflicto porque la reserva se encuentra cancelada o ya fue procesada con otra clave de idempotencia.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '500':
+          $ref: '#/components/responses/ProblemDetails500'
+
+  /atracciones/promociones/contrato:
+    get:
+      tags:
+        - Atracciones - Promociones B2B y Combos v2
+      summary: Consultar acuerdo comercial B2B para promociones y paquetes multidominio
+      description: |
+        ### Mandato de Consideraciones RDA2 (Página 149):
+        > *"En el contrato con los partners se solicita una sola vez: si acepta hacer promociones y cuál es el porcentaje máximo de descuento que estaría dispuesto a aplicar."*
+        
+        Este endpoint permite al microservicio orquestador de paquetes (`MS_PKG` / `ORQ_PKG`) consultar las condiciones comerciales pactadas con la tienda de atracciones para estructurar combos con hoteles, vuelos y autos de renta.
+      parameters:
+        - $ref: '#/components/parameters/XCorrelationIdHeader'
+      responses:
+        '200':
+          description: Términos comerciales de promociones y combos recuperados.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromocionesContratoResponse'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+        '500':
+          $ref: '#/components/responses/ProblemDetails500'
+    put:
+      tags:
+        - Atracciones - Promociones B2B y Combos v2
+      summary: Actualizar y responder cuestionario B2B de promociones y paquetes multidominio
+      description: |
+        ### Cuestionario Obligatorio de Alianza Comercial B2B (Consideraciones RDA2, pág. 149):
+        Permite a la tienda socia (o a su agente inteligente) responder o actualizar formalmente las preguntas obligatorias de la cátedra:
+        1. **¿Acepta participar en la creación de promociones y combos de paquetes turísticos multidominio con Booking Prototipo?** (`permite_promociones`)
+        2. **Si acepta, ¿cuál es el porcentaje máximo de descuento que está dispuesto a aplicar sobre su tarifa pública?** (`porcentaje_descuento_maximo`, ej. 15.0%)
+        3. **¿Qué destinos o atracciones específicas están habilitadas para las promociones?** (`destinos_habilitados`)
+        4. **¿Hasta qué fecha autoriza este acuerdo comercial?** (`vigencia_hasta`)
+        5. **¿Cuáles son las condiciones y restricciones operativas?** (`condiciones_combo`)
+      parameters:
+        - $ref: '#/components/parameters/XCorrelationIdHeader'
+      requestBody:
+        required: true
+        description: Respuestas formales al cuestionario comercial de promociones y combos.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarPromocionesContratoRequest'
+      responses:
+        '200':
+          description: Términos comerciales de promociones formalizados y actualizados exitosamente en Booking Prototipo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromocionesContratoResponse'
+        '400':
+          $ref: '#/components/responses/ProblemDetails400'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+        '500':
+          $ref: '#/components/responses/ProblemDetails500'
+
+  /atracciones/eventos:
+    get:
+      tags:
+        - Atracciones - Outbox EDA y Telemetría de Nodo v2
+      summary: Consultar feed de eventos de integración asíncrona (Patrón Outbox)
+      description: |
+        Expone el registro secuencial de eventos generados por la tienda de atracciones (patrón Transactional Outbox).
+        Permite a Booking Prototipo o a los consumidores EDA consultar periódicamente los cambios de estado (`RESERVA_CREADA`, `RESERVA_CONFIRMADA`, `STOCK_ACTUALIZADO`, `RESERVA_CANCELADA`) garantizando entrega confiable y sincronización con Apache Kafka y RabbitMQ.
+      parameters:
+        - name: after
+          in: query
+          required: false
+          description: Cursor numérico secuencial (`evt_id`). Retorna únicamente eventos con identificador mayor al indicado.
+          schema:
+            type: integer
+            default: 0
+          example: 1042
+        - name: limit
+          in: query
+          required: false
+          description: Cantidad máxima de eventos por lote.
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+        - name: type
+          in: query
+          required: false
+          description: Filtro opcional por tipo de evento específico.
+          schema:
+            type: string
+            enum: [RESERVA_CREADA, RESERVA_CONFIRMADA, STOCK_ACTUALIZADO, RESERVA_CANCELADA]
+        - $ref: '#/components/parameters/XCorrelationIdHeader'
+      responses:
+        '200':
+          description: Lote de eventos de integración recuperado.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OutboxEventItem'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+        '500':
+          $ref: '#/components/responses/ProblemDetails500'
+
+  /atracciones/health:
+    get:
+      tags:
+        - Atracciones - Outbox EDA y Telemetría de Nodo v2
+      summary: Ping de salud y telemetría de nodo para el panel administrativo de Booking
+      security: []
+      description: |
+        ### Monitor de Nodos EDA (Panel 1 de Booking Prototipo)
+        Retorna el estado de disponibilidad y métricas operativas de la tienda de atracciones.
+        El panel administrativo consume este endpoint cada 5 segundos para renderizar el semáforo dinámico:
+        * 🟢 **Verde (`UP`):** Tienda operativa con latencia < 200ms.
+        * 🟡 **Amarillo (`DEGRADED`):** Latencia degradada (200ms - 800ms) o advertencia de memoria.
+        * 🔴 **Rojo (`DOWN`):** Fallo o desconexión por Kill-Switch.
+      responses:
+        '200':
+          description: Estado de salud del nodo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NodeHealthResponse'
+        '503':
+          description: Nodo degradado o en falla crítica.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NodeHealthResponse'
+
+  /auth/login:
+    post:
+      tags: [Extensión de la tienda - Autenticación]
+      summary: Iniciar sesión (devuelve JWT)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+
+  /auth/register:
+    post:
+      tags: [Extensión de la tienda - Autenticación]
+      summary: Registrar turista (siempre rol CLIENTE)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+
+  /auth/me:
+    get:
+      tags: [Extensión de la tienda - Autenticación]
+      summary: Perfil de la sesión actual
+      security: [{BearerAuth: []}]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPublic'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+
+  /admin/dashboard:
+    get:
+      tags: [Extensión de la tienda - Administración]
+      summary: Indicadores del panel
+      security: [{BearerAuth: []}]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminObject'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+
+  /admin/atracciones:
+    get:
+      tags: [Extensión de la tienda - Administración]
+      summary: Listar atracciones (paginado; filtros q, estado, ciudad_id)
+      security: [{BearerAuth: []}]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminPage'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+    post:
+      tags: [Extensión de la tienda - Administración]
+      summary: Crear atracción (queda en BORRADOR)
+      security: [{BearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminObject'
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminObject'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+
+  /admin/atracciones/{id}:
+    get:
+      tags: [Extensión de la tienda - Administración]
+      summary: Detalle completo para edición
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminObject'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+    put:
+      tags: [Extensión de la tienda - Administración]
+      summary: Actualizar atracción (y reemplazar categorías, idiomas, fotos, itinerario, tarifas)
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminObject'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminObject'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+    delete:
+      tags: [Extensión de la tienda - Administración]
+      summary: Eliminar (borrado lógico; 409 si hay reservas futuras activas)
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: OK
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+
+  /admin/atracciones/{id}/publicar:
+    post:
+      tags: [Extensión de la tienda - Administración]
+      summary: Publicar (exige tarifa ADULTO y horario activo)
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminObject'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+
+  /admin/atracciones/{id}/despublicar:
+    post:
+      tags: [Extensión de la tienda - Administración]
+      summary: Despublicar
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminObject'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+
+  /admin/atracciones/{id}/horarios:
+    post:
+      tags: [Extensión de la tienda - Administración]
+      summary: Crear horario
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminObject'
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminObject'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+
+  /admin/atracciones/{id}/turnos:
+    get:
+      tags: [Extensión de la tienda - Administración]
+      summary: Listar turnos con aforo (paginado)
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminPage'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+
+  /admin/atracciones/{id}/turnos/generar:
+    post:
+      tags: [Extensión de la tienda - Administración]
+      summary: Generar turnos para un rango de fechas (se anuncian a Booking por gRPC)
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminObject'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminObject'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+
+  /admin/turnos/{id}:
+    patch:
+      tags: [Extensión de la tienda - Administración]
+      summary: Cambiar aforo o cerrar un turno (se publica a Booking por gRPC)
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminObject'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminObject'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+
+  /admin/categorias:
+    get:
+      tags: [Extensión de la tienda - Administración]
+      summary: Listar categorías
+      security: [{BearerAuth: []}]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminObject'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+    post:
+      tags: [Extensión de la tienda - Administración]
+      summary: Crear categoría
+      security: [{BearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminObject'
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminObject'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+
+  /admin/operadores:
+    get:
+      tags: [Extensión de la tienda - Administración]
+      summary: Listar operadores (paginado)
+      security: [{BearerAuth: []}]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminPage'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+    post:
+      tags: [Extensión de la tienda - Administración]
+      summary: Crear operador
+      security: [{BearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminObject'
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminObject'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+
+  /admin/guias:
+    get:
+      tags: [Extensión de la tienda - Administración]
+      summary: Listar guías (paginado)
+      security: [{BearerAuth: []}]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminPage'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+    post:
+      tags: [Extensión de la tienda - Administración]
+      summary: Crear guía
+      security: [{BearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminObject'
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminObject'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+
+  /admin/ciudades:
+    get:
+      tags: [Extensión de la tienda - Administración]
+      summary: Ciudades con sus aeropuertos (paginado)
+      security: [{BearerAuth: []}]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminPage'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+    post:
+      tags: [Extensión de la tienda - Administración]
+      summary: Crear ciudad con su aeropuerto
+      security: [{BearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminObject'
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminObject'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+
+  /admin/reservas:
+    get:
+      tags: [Extensión de la tienda - Administración]
+      summary: Listar reservas (paginado; filtros estado, atraccion, fecha, q)
+      security: [{BearerAuth: []}]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminPage'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+
+  /admin/usuarios:
+    get:
+      tags: [Extensión de la tienda - Administración]
+      summary: Listar usuarios (paginado)
+      security: [{BearerAuth: []}]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminPage'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+
+  /admin/sync/estado:
+    get:
+      tags: [Extensión de la tienda - Administración]
+      summary: Estado de la sincronización gRPC y eventos pendientes
+      security: [{BearerAuth: []}]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminObject'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+
+  /admin/sync/enviar-pendientes:
+    post:
+      tags: [Extensión de la tienda - Administración]
+      summary: Forzar el envío de eventos de stock pendientes a Booking
+      security: [{BearerAuth: []}]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminObject'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+
+  /admin/sync/conciliar:
+    post:
+      tags: [Extensión de la tienda - Administración]
+      summary: Conciliar aforo con Booking (GetSlotAvailability + StreamInventoryChanges)
+      security: [{BearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminObject'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminObject'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '403':
+          $ref: '#/components/responses/ProblemDetails403'
+
+components:
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      required: false
+      description: Número de página (1-indexed).
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    LimitParam:
+      name: limit
+      in: query
+      required: false
+      description: Resultados por página (máximo 100 en el panel).
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    IdempotencyKeyHeader:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: |
+        Identificador único universal (UUID v4) generado por el cliente para garantizar idempotencia en la mutación transaccional.  
+        Evita duplicación de cobros o descuento indebido de cupos ante cortes de red o reintentos automáticos.
+      schema:
+        type: string
+        format: uuid
+      example: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+
+    XCorrelationIdHeader:
+      name: X-Correlation-Id
+      in: header
+      required: false
+      description: |
+        Identificador unívoco de trazabilidad distribuida (Semana 8 & Consideraciones RDA2).  
+        Se propaga de forma invariable entre peticiones HTTP, logs JSON estructurados, mensajes de RabbitMQ y streams de Apache Kafka.
+      schema:
+        type: string
+      example: "cid-8821a-9923"
+
+    XNodeIdHeader:
+      name: X-Node-Id
+      in: header
+      required: false
+      description: Identificador del nodo emisor de la petición (ej. `node-booking-core-01`).
+      schema:
+        type: string
+      example: "node-booking-core-01"
+
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: {type: string, format: email}
+        password: {type: string}
+    RegisterRequest:
+      type: object
+      required: [email, password, nombre, apellido]
+      properties:
+        email: {type: string, format: email}
+        password: {type: string, minLength: 8, description: "Mínimo 8 caracteres con letras y números."}
+        nombre: {type: string}
+        apellido: {type: string}
+    UserPublic:
+      type: object
+      properties:
+        id: {type: integer}
+        email: {type: string}
+        nombre: {type: string}
+        apellido: {type: string}
+        roles: {type: array, items: {type: string, enum: [ADMIN, OPERADOR, CLIENTE]}}
+    AuthResponse:
+      type: object
+      required: [access_token, token_type, expires_in, user]
+      properties:
+        access_token: {type: string, description: "JWT (RFC 7519)."}
+        token_type: {type: string, example: Bearer}
+        expires_in: {type: string, example: 8h}
+        user: {$ref: '#/components/schemas/UserPublic'}
+    AdminObject:
+      type: object
+      additionalProperties: true
+      description: Objeto del panel (los campos concretos se describen en la guía del administrador).
+    AdminPage:
+      type: object
+      required: [metadata, data]
+      properties:
+        metadata: {$ref: '#/components/schemas/PaginationMetadata'}
+        data: {type: array, items: {type: object, additionalProperties: true}}
+
+    CategoryTreeNode:
+      type: object
+      required:
+        - id
+        - nombre
+        - slug
+        - incluye_comida
+        - incluye_transporte
+        - incluye_guia
+      properties:
+        id:
+          type: string
+          description: Identificador único de la categoría.
+          example: "cat-tours-100"
+        nombre:
+          type: string
+          description: Nombre legible de la categoría.
+          example: "Tours y Experiencias Guiadas"
+        slug:
+          type: string
+          description: Identificador web URL-friendly.
+          example: "tours-experiencias"
+        descripcion:
+          type: string
+          description: Resumen descriptivo de las actividades de este grupo.
+          example: "Recorridos por la ciudad y la naturaleza con guías titulados."
+        icono:
+          type: string
+          description: Nombre del icono para la interfaz gráfica (FontAwesome o Lucide).
+          example: "compass"
+        incluye_comida:
+          type: boolean
+          description: Bandera booleana obligatoria. Indica si las actividades de esta categoría incluyen alimentación.
+          example: false
+        incluye_transporte:
+          type: boolean
+          description: Bandera booleana obligatoria. Indica si incluye traslado vehicular.
+          example: true
+        incluye_guia:
+          type: boolean
+          description: Bandera booleana obligatoria. Indica si incluye acompañamiento de guía profesional.
+          example: true
+        orden:
+          type: integer
+          description: Posición ordinal de renderizado en el menú.
+          example: 1
+        subcategorias:
+          type: array
+          description: Lista anidada recursiva de subcategorías hijas.
+          items:
+            $ref: '#/components/schemas/CategoryTreeNode'
+
+    CategoryFlat:
+      type: object
+      required:
+        - id
+        - nombre
+        - slug
+      properties:
+        id:
+          type: string
+          example: "cat-tours-201"
+        padre_id:
+          type: string
+          nullable: true
+          description: Identificador de la categoría padre (null si es categoría raíz).
+          example: "cat-tours-100"
+        nombre:
+          type: string
+          example: "Tours Gastronómicos"
+        slug:
+          type: string
+          example: "tours-gastronomicos"
+        incluye_comida:
+          type: boolean
+          example: true
+        incluye_transporte:
+          type: boolean
+          example: false
+        incluye_guia:
+          type: boolean
+          example: true
+
+    SearchAtraccionesRequestV2:
+      type: object
+      properties:
+        query:
+          type: string
+          description: Término de búsqueda libre o nombre de destino (ej. "Quito", "Mitad del Mundo").
+          example: "Quito"
+        ciudad:
+          type: string
+          description: Ciudad geográfica de destino.
+          example: "Quito"
+        fecha_inicio:
+          type: string
+          format: date
+          description: Fecha de inicio de la experiencia turística (`YYYY-MM-DD`).
+          example: "2026-10-25"
+        fecha_fin:
+          type: string
+          format: date
+          description: Fecha final para rangos de búsqueda flexible (`YYYY-MM-DD`).
+          example: "2026-10-28"
+        categoria_id:
+          type: string
+          description: Filtrar por identificador de categoría o subcategoría.
+          example: "cat-tours-201"
+        incluye_comida:
+          type: boolean
+          description: Filtrar únicamente experiencias que incluyan alimentación.
+        incluye_transporte:
+          type: boolean
+          description: Filtrar únicamente experiencias que incluyan transporte.
+        incluye_guia:
+          type: boolean
+          description: Filtrar únicamente experiencias que cuenten con guía certificado.
+        precio_min:
+          type: number
+          minimum: 0
+          description: Precio mínimo en USD por adulto.
+          example: 15.00
+        precio_max:
+          type: number
+          description: Precio máximo en USD por adulto.
+          example: 150.00
+        duracion_max_horas:
+          type: integer
+          description: Límite de duración en horas (ej. 4 para tours de medio día).
+          example: 8
+        idioma_guia:
+          type: string
+          description: Idioma requerido del guía (ej. "Español", "Inglés", "Francés").
+          example: "Español"
+        accesible_silla_ruedas:
+          type: boolean
+          description: Filtro de accesibilidad universal para personas en silla de ruedas.
+        animales_asistencia:
+          type: boolean
+          description: Filtro de admisión obligatoria de animales de asistencia o lazarillos.
+        cancelacion_gratuita:
+          type: boolean
+          description: Filtro de tours con cancelación sin costo hasta 24 horas antes.
+        adult_count:
+          type: integer
+          default: 1
+          minimum: 1
+          description: Cantidad de personas adultas para cotizar disponibilidad.
+        cantidad_adultos:
+          type: integer
+          default: 1
+          minimum: 1
+          description: Alias canónico en español para cantidad de adultos solicitados.
+        page:
+          type: integer
+          default: 1
+          minimum: 1
+        limit:
+          type: integer
+          default: 10
+          maximum: 50
+
+    SearchAtraccionesResponseV2:
+      type: object
+      required:
+        - metadata
+        - data
+      properties:
+        request_id:
+          type: string
+          example: "req-atr-8812"
+        metadata:
+          $ref: '#/components/schemas/PaginationMetadata'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AtraccionCardResponseV2'
+
+    PaginationMetadata:
+      type: object
+      required:
+        - total_results
+        - page
+        - limit
+        - total_pages
+      properties:
+        total_results:
+          type: integer
+          example: 32
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 10
+        total_pages:
+          type: integer
+          example: 4
+        next_cursor:
+          type: string
+          nullable: true
+          example: "eyJvZmZzZXQiOjEwfQ=="
+
+    AtraccionCardResponseV2:
+      type: object
+      required:
+        - id
+        - name
+        - city
+        - price
+        - rating
+        - duration
+        - inclusions
+      properties:
+        id:
+          type: string
+          description: Identificador único público (ej. ID alfanumérico de Dilan o UUID).
+          example: "PRhu4UBTWPBC"
+        slug:
+          type: string
+          example: "quito-city-bus-tour-mitad-del-mundo"
+        name:
+          type: string
+          example: "Quito City Bus Tour & Mitad del Mundo Oficial"
+        short_description:
+          type: string
+          example: "Recorrido panorámico de dos pisos por el Centro Histórico y la Ciudad Mitad del Mundo."
+        city:
+          type: string
+          example: "Quito"
+        duration:
+          type: string
+          example: "7 horas"
+        duration_hours:
+          type: number
+          example: 7.0
+        price:
+          $ref: '#/components/schemas/TarifaBaseDesglosada'
+        rating:
+          $ref: '#/components/schemas/RatingResumen'
+        free_cancellation:
+          type: boolean
+          description: Indica si el tour admite cancelación gratuita sin penalidad.
+          example: true
+        free_cancellation_hours:
+          type: integer
+          description: Plazo de horas de antelación para cancelar gratis.
+          example: 24
+        inclusions:
+          $ref: '#/components/schemas/InclusionesFlags'
+        meeting_point:
+          type: string
+          example: "Boulevard Naciones Unidas y Av. Shyris (Parada Quinde)"
+        photos:
+          type: array
+          items:
+            type: string
+          example:
+            - "https://images.unsplash.com/photo-1589394815804-964ed0be2eb5?w=600"
+            - "https://images.unsplash.com/photo-1596436889106-be35e843f974?w=600"
+        permite_paquete:
+          type: boolean
+          description: Bandera que habilita el armado de paquetes y combos turísticos con descuento en Booking.
+          example: true
+        nombre:
+          type: string
+          description: Alias canónico en español para nombre de la atracción.
+          example: "Quito City Bus Tour & Mitad del Mundo Oficial"
+        descripcion_corta:
+          type: string
+          description: Alias canónico en español para descripción corta.
+          example: "Recorrido panorámico de dos pisos por el Centro Histórico y la Ciudad Mitad del Mundo."
+        ciudad:
+          type: string
+          description: Alias canónico en español para ciudad.
+          example: "Quito"
+        duracion:
+          type: string
+          description: Alias canónico en español para duración estimada.
+          example: "7 horas"
+        precio:
+          $ref: '#/components/schemas/TarifaBaseDesglosada'
+          description: Alias canónico en español para tarifa base desglosada.
+        calificacion:
+          $ref: '#/components/schemas/RatingResumen'
+          description: Alias canónico en español para calificación resumida.
+        cancelacion_gratuita:
+          type: boolean
+          description: Alias canónico en español para bandera de cancelación gratuita.
+          example: true
+        inclusiones:
+          $ref: '#/components/schemas/InclusionesFlags'
+          description: Alias canónico en español para banderas de inclusión obligatorias.
+        punto_encuentro:
+          type: string
+          description: Alias canónico en español para punto de encuentro.
+          example: "Boulevard Naciones Unidas y Av. Shyris (Parada Quinde)"
+
+    AtraccionDetailResponseV2:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - city
+        - price
+        - rating
+        - inclusions
+        - itinerary
+        - meeting_point_geo
+      properties:
+        id:
+          type: string
+          example: "PRhu4UBTWPBC"
+        uuid:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+        slug:
+          type: string
+          example: "quito-city-bus-tour-mitad-del-mundo"
+        name:
+          type: string
+          example: "Quito City Bus Tour & Mitad del Mundo Oficial"
+        description:
+          type: string
+          example: "Disfruta de la mejor experiencia turística de la capital ecuatoriana en bus de dos pisos con guía bilingüe certificado."
+        city:
+          type: string
+          example: "Quito"
+        duration:
+          type: string
+          example: "7 horas"
+        price:
+          $ref: '#/components/schemas/TarifaBaseDesglosada'
+        rating:
+          $ref: '#/components/schemas/RatingCompletoDesglosado'
+        inclusions:
+          $ref: '#/components/schemas/InclusionesFlags'
+        inclusions_list:
+          type: array
+          items:
+            type: string
+          example:
+            - "Transporte turístico en bus panorámico de dos pisos"
+            - "Guía oficial certificado bilingüe (Español / Inglés)"
+            - "Entrada al Complejo Monumento a la Mitad del Mundo"
+            - "Degustación guiada de chocolate fino de aroma ecuatoriano"
+        exclusions_list:
+          type: array
+          items:
+            type: string
+          example:
+            - "Entrada opcional al Museo Intiñán ($5.00 en puerta)"
+            - "Almuerzo y bebidas alcohólicas adicionales"
+            - "Propinas voluntarias para el guía y conductor"
+        itinerary:
+          type: array
+          description: Secuencia cronológica paso a paso del recorrido.
+          items:
+            $ref: '#/components/schemas/ItineraryStop'
+        meeting_point_geo:
+          $ref: '#/components/schemas/MeetingPointGeo'
+        accessibility:
+          $ref: '#/components/schemas/AccessibilityAttributes'
+        guide_languages:
+          type: array
+          items:
+            type: string
+          example: ["Español", "Inglés"]
+        cancellation_policy:
+          $ref: '#/components/schemas/CancellationPolicy'
+        permite_paquete:
+          type: boolean
+          example: true
+        porcentaje_descuento_paquete:
+          type: number
+          description: Descuento comercial máximo otorgado por el socio para combos turísticos.
+          example: 15.0
+        photos:
+          type: array
+          items:
+            type: string
+        proveedor:
+          $ref: '#/components/schemas/ProveedorInfo'
+        nombre:
+          type: string
+          description: Alias canónico en español para nombre de la atracción.
+          example: "Quito City Bus Tour & Mitad del Mundo Oficial"
+        descripcion:
+          type: string
+          description: Alias canónico en español para descripción completa.
+          example: "Disfruta de la mejor experiencia turística de la capital ecuatoriana en bus de dos pisos con guía bilingüe certificado."
+        ciudad:
+          type: string
+          description: Alias canónico en español para ciudad.
+          example: "Quito"
+        duracion:
+          type: string
+          description: Alias canónico en español para duración estimada.
+          example: "7 horas"
+        precio:
+          $ref: '#/components/schemas/TarifaBaseDesglosada'
+          description: Alias canónico en español para tarifa base desglosada.
+        calificacion:
+          $ref: '#/components/schemas/RatingCompletoDesglosado'
+          description: Alias canónico en español para calificación desglosada.
+        inclusiones:
+          $ref: '#/components/schemas/InclusionesFlags'
+          description: Alias canónico en español para banderas de inclusión obligatorias.
+        punto_encuentro_geo:
+          $ref: '#/components/schemas/MeetingPointGeo'
+          description: Alias canónico en español para coordenadas y datos del punto de encuentro.
+        itinerario:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItineraryStop'
+          description: Alias canónico en español para itinerario paso a paso.
+        accesibilidad:
+          $ref: '#/components/schemas/AccessibilityAttributes'
+          description: Alias canónico en español para atributos de accesibilidad.
+        politica_cancelacion:
+          $ref: '#/components/schemas/CancellationPolicy'
+          description: Alias canónico en español para política de cancelación.
+
+    TarifaBaseDesglosada:
+      type: object
+      required:
+        - currency
+        - adult
+        - child
+        - senior
+        - infant
+      properties:
+        currency:
+          type: string
+          example: "USD"
+        adult:
+          type: number
+          description: Tarifa completa de adulto (13 a 64 años).
+          example: 30.00
+        child:
+          type: number
+          description: Tarifa para niños (5 a 12 años, típicamente con 50% descuento).
+          example: 15.00
+        senior:
+          type: number
+          description: Tarifa preferencial para adultos mayores (65+ años).
+          example: 18.00
+        infant:
+          type: number
+          description: Tarifa de infantes/bebés (0 a 4 años, tarifa $0.00 pero ocupa cupo de aforo).
+          example: 0.00
+        student:
+          type: number
+          description: Tarifa preferencial para estudiantes acreditados con carnet (descuento típico 25%).
+          example: 22.50
+        adulto:
+          type: number
+          description: Alias canónico en español para tarifa de adulto.
+          example: 30.00
+        nino:
+          type: number
+          description: Alias canónico en español para tarifa de niño.
+          example: 15.00
+        tercera_edad:
+          type: number
+          description: Alias canónico en español para tarifa de adulto mayor.
+          example: 18.00
+        infante:
+          type: number
+          description: Alias canónico en español para tarifa de infante/bebé ($0.00).
+          example: 0.00
+        estudiante:
+          type: number
+          description: Alias canónico en español para tarifa de estudiante.
+          example: 22.50
+        moneda:
+          type: string
+          description: Alias canónico en español para código de divisa (USD).
+          example: "USD"
+
+    RatingResumen:
+      type: object
+      required:
+        - score
+        - review_count
+      properties:
+        score:
+          type: number
+          example: 9.8
+        review_count:
+          type: integer
+          example: 1250
+        badge_text:
+          type: string
+          example: "Excepcional"
+
+    RatingCompletoDesglosado:
+      type: object
+      required:
+        - score
+        - review_count
+        - breakdown
+      properties:
+        score:
+          type: number
+          example: 9.8
+        review_count:
+          type: integer
+          example: 1250
+        badge_text:
+          type: string
+          example: "Excepcional"
+        breakdown:
+          $ref: '#/components/schemas/RatingsBreakdown'
+
+    RatingsBreakdown:
+      type: object
+      description: Desglose analítico de opiniones por pilares de calidad.
+      required:
+        - limpieza
+        - servicio
+        - calidad_precio
+        - puntualidad
+      properties:
+        limpieza:
+          type: number
+          description: Calificación de higiene y desinfección en unidades (1 a 10).
+          example: 9.9
+        servicio:
+          type: number
+          description: Calificación de la atención del guía y personal de apoyo (1 a 10).
+          example: 9.8
+        calidad_precio:
+          type: number
+          description: Relación entre lo pagado y la experiencia vivida (1 a 10).
+          example: 9.6
+        puntualidad:
+          type: number
+          description: Cumplimiento de los horarios programados del itinerario (1 a 10).
+          example: 9.7
+        cleanliness:
+          type: number
+          description: English alias for cleanliness rating score.
+          example: 9.9
+        service_score:
+          type: number
+          description: English alias for customer service rating score.
+          example: 9.8
+        value_for_money:
+          type: number
+          description: English alias for quality-to-price ratio score.
+          example: 9.6
+        punctuality:
+          type: number
+          description: English alias for itinerary punctuality score.
+          example: 9.7
+
+    InclusionesFlags:
+      type: object
+      required:
+        - includes_food
+        - includes_transport
+        - includes_guide
+      properties:
+        includes_food:
+          type: boolean
+          description: Whether food/snacks/tastings are included.
+          example: true
+        includes_transport:
+          type: boolean
+          description: Whether ground/panoramic transport is included.
+          example: true
+        includes_guide:
+          type: boolean
+          description: Whether certified official guide service is included.
+          example: true
+        incluye_comida:
+          type: boolean
+          description: Alias en español para retrocompatibilidad.
+          example: true
+        incluye_transporte:
+          type: boolean
+          description: Alias en español para retrocompatibilidad.
+          example: true
+        incluye_guia:
+          type: boolean
+          description: Alias en español para retrocompatibilidad.
+          example: true
+
+    ItineraryStop:
+      type: object
+      required:
+        - stop_number
+        - time
+        - title
+        - duration_minutes
+      properties:
+        stop_number:
+          type: integer
+          example: 1
+        time:
+          type: string
+          description: Hora de inicio programada del hito o parada.
+          example: "09:00 a.m."
+        title:
+          type: string
+          example: "Punto de encuentro y salida en Boulevard Naciones Unidas"
+        description:
+          type: string
+          example: "Recepción de pasajeros, verificación de vouchers QR y bienvenida por el guía."
+        duration_minutes:
+          type: integer
+          description: Duración estimada en minutos de la parada o actividad.
+          example: 30
+        location_name:
+          type: string
+          example: "Parque La Carolina / Quinde Tour Center"
+        numero_parada:
+          type: integer
+          description: Alias canónico en español para orden secuencial de la parada.
+          example: 1
+        hora:
+          type: string
+          description: Alias canónico en español para hora programada.
+          example: "09:00 a.m."
+        titulo:
+          type: string
+          description: Alias canónico en español para título de la parada.
+          example: "Punto de encuentro y salida en Boulevard Naciones Unidas"
+        descripcion:
+          type: string
+          description: Alias canónico en español para descripción de actividades en la parada.
+          example: "Recepción de pasajeros, verificación de vouchers QR y bienvenida por el guía."
+        duracion_minutos:
+          type: integer
+          description: Alias canónico en español para duración estimada en minutos.
+          example: 30
+        nombre_ubicacion:
+          type: string
+          description: Alias canónico en español para referencia del lugar.
+          example: "Parque La Carolina / Quinde Tour Center"
+
+    MeetingPointGeo:
+      type: object
+      required:
+        - address
+        - city
+        - latitude
+        - longitude
+      properties:
+        address:
+          type: string
+          example: "Boulevard Naciones Unidas y Av. de los Shyris, frente al Banco del Pichincha"
+        city:
+          type: string
+          example: "Quito"
+        latitude:
+          type: number
+          example: -0.178652
+        longitude:
+          type: number
+          example: -78.483120
+        arrival_instructions:
+          type: string
+          example: "Presentarse con 15 minutos de anticipación junto al totem informativo rojo de Descubre EC."
+        google_maps_url:
+          type: string
+          example: "https://maps.google.com/?q=-0.178652,-78.483120"
+        direccion:
+          type: string
+          description: Alias canónico en español para dirección física.
+          example: "Boulevard Naciones Unidas y Av. de los Shyris, frente al Banco del Pichincha"
+        ciudad:
+          type: string
+          description: Alias canónico en español para ciudad.
+          example: "Quito"
+        latitud:
+          type: number
+          description: Alias canónico en español para coordenada GPS de latitud.
+          example: -0.178652
+        longitud:
+          type: number
+          description: Alias canónico en español para coordenada GPS de longitud.
+          example: -78.483120
+        instrucciones_llegada:
+          type: string
+          description: Alias canónico en español para pautas de encuentro.
+          example: "Presentarse con 15 minutos de anticipación junto al totem informativo rojo de Descubre EC."
+
+    AccessibilityAttributes:
+      type: object
+      properties:
+        wheelchair_accessible:
+          type: boolean
+          description: Apto para personas en silla de ruedas en bus y paradas.
+          example: true
+        stroller_accessible:
+          type: boolean
+          description: Apto para carriolas de bebés.
+          example: true
+        service_animals_allowed:
+          type: boolean
+          description: Admisión de perros guía y animales de asistencia según normativa.
+          example: true
+        accesible_silla_ruedas:
+          type: boolean
+          description: Alias canónico en español para accesibilidad en silla de ruedas.
+          example: true
+        accesible_carriola:
+          type: boolean
+          description: Alias canónico en español para aptitud de carriolas infantiles.
+          example: true
+        admite_animales_asistencia:
+          type: boolean
+          description: Alias canónico en español para ingreso de animales de servicio.
+          example: true
+
+    CancellationPolicy:
+      type: object
+      required:
+        - free_cancellation
+        - deadline_hours
+      properties:
+        free_cancellation:
+          type: boolean
+          example: true
+        deadline_hours:
+          type: integer
+          description: Horas mínimas previas al inicio para cancelar sin penalidad.
+          example: 24
+        description:
+          type: string
+          example: "Cancela gratis hasta 24 horas antes de la actividad y recibe el 100% de reembolso."
+        cancelacion_gratuita:
+          type: boolean
+          description: Alias canónico en español para cancelación gratuita sin recargo.
+          example: true
+        horas_limite:
+          type: integer
+          description: Alias canónico en español para plazo de horas previas de antelación.
+          example: 24
+        descripcion:
+          type: string
+          description: Alias canónico en español para descripción de la política.
+          example: "Cancela gratis hasta 24 horas antes de la actividad y recibe el 100% de reembolso."
+
+    ProveedorInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "proveedor-atracciones-dilan"
+        nombre_comercial:
+          type: string
+          example: "Descubre EC Tours & Experiences"
+        ruc:
+          type: string
+          example: "1792348123001"
+        telefono_emergencia:
+          type: string
+          example: "+593991234567"
+        email_soporte:
+          type: string
+          example: "soporte@descubreec.com"
+
+    DisponibilidadResponse:
+      type: object
+      required:
+        - atraccion_id
+        - date
+        - total_available_slots
+        - time_slots
+      properties:
+        atraccion_id:
+          type: string
+          example: "PRhu4UBTWPBC"
+        date:
+          type: string
+          format: date
+          example: "2026-10-25"
+        fecha:
+          type: string
+          format: date
+          description: Alias canónico en español para fecha de consulta.
+          example: "2026-10-25"
+        total_available_slots:
+          type: integer
+          description: Sumatoria de cupos disponibles entre todas las franjas horarias del día.
+          example: 45
+        total_cupos_disponibles:
+          type: integer
+          description: Alias canónico en español para total de cupos disponibles.
+          example: 45
+        time_slots:
+          type: array
+          description: Listado de franjas horarias del día.
+          items:
+            $ref: '#/components/schemas/TimeSlotItem'
+        turnos:
+          type: array
+          description: Alias canónico en español para listado de turnos.
+          items:
+            $ref: '#/components/schemas/TimeSlotItem'
+
+    TimeSlotItem:
+      type: object
+      required:
+        - slot_id
+        - time
+        - total_slots
+        - available_slots
+        - status
+      properties:
+        slot_id:
+          type: string
+          description: Identificador unívoco del turno horario para bloqueo atómico.
+          example: "slot-20261025-1030"
+        time:
+          type: string
+          description: Hora del turno en formato legible (12h o 24h).
+          example: "10:30 a.m."
+        time_24h:
+          type: string
+          description: Hora del turno en formato 24 horas normalizado (HH:mm:ss).
+          example: "10:30:00"
+        total_slots:
+          type: integer
+          description: Total capacity allocated for this time slot.
+          example: 25
+        available_slots:
+          type: integer
+          description: Real-time available capacity for booking.
+          example: 8
+        status:
+          type: string
+          enum: [DISPONIBLE, ULTIMOS_CUPOS, AGOTADO]
+          description: Real-time slot operational status.
+          example: "DISPONIBLE"
+        price_adult:
+          type: number
+          description: Unit ticket price for adult in USD.
+          example: 30.00
+        price_child:
+          type: number
+          description: Unit ticket price for child (50% off) in USD.
+          example: 15.00
+        hora:
+          type: string
+          description: Alias canónico en español para hora del turno.
+          example: "10:30 a.m."
+        hora_24h:
+          type: string
+          description: Alias canónico en español para hora 24h.
+          example: "10:30:00"
+        cupos_totales:
+          type: integer
+          example: 25
+        cupos_disponibles:
+          type: integer
+          example: 8
+        estado:
+          type: string
+          enum: [DISPONIBLE, ULTIMOS_CUPOS, AGOTADO]
+          example: "DISPONIBLE"
+        precio_adulto_slot:
+          type: number
+          example: 30.00
+        precio_nino_slot:
+          type: number
+          example: 15.00
+
+    CreateReservaRequestV3:
+      type: object
+      required:
+        - attraction_id
+        - slot_id
+        - date
+        - time
+        - adult_count
+        - customer
+        - payment_method
+      properties:
+        attraction_id:
+          type: string
+          description: Canonical attraction ID or slug to book.
+          example: "PRhu4UBTWPBC"
+        atraccion_id:
+          type: string
+          description: Spanish alias accepted for backwards compatibility.
+          example: "PRhu4UBTWPBC"
+        slot_id:
+          type: string
+          description: >-
+            Unique time-slot identifier for atomic lock (e.g. 'slot-20261025-1030').
+            Enforces strict matching: if date or time mismatch this slot_id,
+            returns 400 Bad Request (SLOT_TIME_MISMATCH).
+          example: "slot-20261025-1030"
+        date:
+          type: string
+          format: date
+          description: Tour date in ISO format YYYY-MM-DD.
+          example: "2026-10-25"
+        fecha:
+          type: string
+          format: date
+          description: Spanish alias for tour date.
+          example: "2026-10-25"
+        time:
+          type: string
+          description: Canonical time string matching the slot_id (e.g. '10:30 a.m.' or '10:30:00').
+          example: "10:30 a.m."
+        hora:
+          type: string
+          description: Spanish alias for tour time.
+          example: "10:30:00"
+        time_24h:
+          type: string
+          pattern: '^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$'
+          description: 24h normalized time format (HH:mm:ss).
+          example: "10:30:00"
+        adult_count:
+          type: integer
+          minimum: 1
+          description: Adult ticket count (minimum 1).
+          example: 2
+        child_count:
+          type: integer
+          default: 0
+          minimum: 0
+          description: Child ticket count (50% discount).
+          example: 1
+        senior_count:
+          type: integer
+          default: 0
+          minimum: 0
+          description: Senior ticket count (30% discount).
+          example: 0
+        infant_count:
+          type: integer
+          default: 0
+          minimum: 0
+          description: Infant ticket count ($0 price, legal capacity reserved).
+          example: 0
+        special_requirements:
+          type: string
+          example: "Silla de ruedas para acceso y asistencia en inglés"
+        customer:
+          $ref: '#/components/schemas/CustomerContactDto'
+        payment_method:
+          type: object
+          required:
+            - method
+          properties:
+            method:
+              type: string
+              enum: [CREDIT_CARD, DEBIT_CARD, PAYPAL, TRANSFER]
+              example: "CREDIT_CARD"
+        correlation_id:
+          type: string
+          example: "cid-v3-8821a"
+        idempotency_key:
+          type: string
+          example: "idem-v3-9932b"
+
+    CreateReservaRequestV2:
+      type: object
+      required:
+        - atraccion_id
+        - fecha
+        - slot_id
+        - hora
+        - adult_count
+        - customer
+        - payment_method
+      properties:
+        atraccion_id:
+          type: string
+          description: Identificador único de la atracción o tour a reservar (Campo obligatorio de contrato).
+          example: "PRhu4UBTWPBC"
+        fecha:
+          type: string
+          format: date
+          description: Fecha de la actividad en formato ISO 8601 `YYYY-MM-DD`.
+          example: "2026-10-25"
+        slot_id:
+          type: string
+          description: Identificador unívoco del turno/franja horaria obtenido desde la consulta de disponibilidad para bloqueo atómico y pesimista de aforo (ej. `slot-20261025-1030`).
+          example: "slot-20261025-1030"
+        hora:
+          type: string
+          description: Franja horaria seleccionada en formato militar 24h (`HH:mm:ss`) o etiqueta legible (`10:30 a.m.`).
+          example: "10:30:00"
+        time_24h:
+          type: string
+          pattern: '^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$'
+          description: Hora de inicio militar normalizada en 24 horas para indexación en base de datos.
+          example: "10:30:00"
+        adult_count:
+          type: integer
+          minimum: 1
+          description: Cantidad de boletos para adultos (mínimo 1).
+          example: 2
+        cantidad_adultos:
+          type: integer
+          minimum: 1
+          description: Alias canónico en español para cantidad de adultos.
+          example: 2
+        child_count:
+          type: integer
+          default: 0
+          minimum: 0
+          description: Cantidad de boletos para niños (5 a 12 años, 50% descuento).
+          example: 1
+        cantidad_ninos:
+          type: integer
+          default: 0
+          minimum: 0
+          description: Alias canónico en español para cantidad de niños.
+          example: 1
+        senior_count:
+          type: integer
+          default: 0
+          minimum: 0
+          description: Cantidad de boletos para adultos mayores (65+ años).
+          example: 0
+        cantidad_seniors:
+          type: integer
+          default: 0
+          minimum: 0
+          description: Alias canónico en español para tercera edad.
+          example: 0
+        student_count:
+          type: integer
+          default: 0
+          minimum: 0
+          description: Cantidad de boletos para estudiantes con carnet vigente.
+          example: 0
+        cantidad_estudiantes:
+          type: integer
+          default: 0
+          minimum: 0
+          description: Alias canónico en español para boletos de estudiante.
+          example: 0
+        infant_count:
+          type: integer
+          default: 0
+          minimum: 0
+          description: Cantidad de infantes (0 a 4 años, tarifa $0.00 pero ocupa cupo legal de transporte).
+          example: 0
+        cantidad_infantes:
+          type: integer
+          default: 0
+          minimum: 0
+          description: Alias canónico en español para infantes.
+          example: 0
+        customer:
+          $ref: '#/components/schemas/CustomerContactDto'
+        passengers:
+          type: array
+          description: Listado detallado de acompañantes adicionales.
+          items:
+            $ref: '#/components/schemas/PassengerItem'
+        saga_id:
+          type: string
+          description: Identificador de la transacción distribuida Saga emitido por el agregador Booking Prototipo.
+          example: "SAGA-7K2X9M"
+        idempotency_key:
+          type: string
+          deprecated: true
+          description: DEPRECATED (IETF Draft). La clave de idempotencia DEBE transmitirse exclusivamente en la cabecera HTTP `Idempotency-Key` (UUID v4). Si se envía en el cuerpo, debe coincidir exactamente con el valor de la cabecera.
+          example: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+        payment_method:
+          type: string
+          enum: [TARJETA_CREDITO, TRANSFERENCIA, SOA_BOOKING_GATEWAY, PAGO_EN_SITIO]
+          example: "SOA_BOOKING_GATEWAY"
+        metodo_pago:
+          type: string
+          enum: [TARJETA_CREDITO, TRANSFERENCIA, SOA_BOOKING_GATEWAY, PAGO_EN_SITIO]
+          description: Alias canónico en español para método de pago.
+          example: "SOA_BOOKING_GATEWAY"
+        special_requirements:
+          type: string
+          description: Indicaciones de dieta vegetariana, alergias, requerimiento de silla de ruedas.
+          example: "Un pasajero requiere asistencia para subir al bus de dos pisos."
+        observaciones:
+          type: string
+          description: Alias canónico en español para requerimientos especiales.
+          example: "Un pasajero requiere asistencia para subir al bus de dos pisos."
+
+    CustomerContactDto:
+      type: object
+      required:
+        - full_name
+        - email
+        - phone
+        - document_type
+        - document_id
+      properties:
+        full_name:
+          type: string
+          description: Nombre completo del titular (al menos 2 palabras, caracteres alfabéticos).
+          example: "Paúl Rosero"
+        nombre_completo:
+          type: string
+          description: Alias canónico en español para el nombre del titular.
+          example: "Paúl Rosero"
+        email:
+          type: string
+          format: email
+          description: Correo electrónico válido para recepción del voucher digital y calendar .ICS.
+          example: "paul.rosero@epn.edu.ec"
+        correo:
+          type: string
+          format: email
+          description: Alias canónico en español para correo electrónico.
+          example: "paul.rosero@epn.edu.ec"
+        phone:
+          type: string
+          description: Número telefónico de contacto en formato internacional E.164 o celular ecuatoriano (09XXXXXXXX).
+          example: "+593991234567"
+        telefono:
+          type: string
+          description: Alias canónico en español para número telefónico.
+          example: "+593991234567"
+        document_type:
+          type: string
+          enum: [CEDULA, PASAPORTE, RUC]
+          example: "CEDULA"
+        tipo_documento:
+          type: string
+          enum: [CEDULA, PASAPORTE, RUC]
+          description: Alias canónico en español para tipo de documento.
+          example: "CEDULA"
+        document_id:
+          type: string
+          description: Número de documento de identidad (cédula de 10 dígitos validada por módulo 10 o pasaporte de 6 a 9 caracteres).
+          example: "1723456789"
+        numero_documento:
+          type: string
+          description: Alias canónico en español para número de documento de identidad.
+          example: "1723456789"
+
+    PassengerItem:
+      type: object
+      required:
+        - full_name
+        - ticket_type
+      properties:
+        full_name:
+          type: string
+          example: "Mateo Rosero"
+        document_id:
+          type: string
+          example: "1754321098"
+        ticket_type:
+          type: string
+          enum: [ADULT, CHILD, SENIOR, INFANT, STUDENT]
+          example: "CHILD"
+
+    ReservaConfirmadaResponseV2:
+      type: object
+      required:
+        - external_order_id
+        - reservation_id
+        - reservation_code
+        - status
+        - date
+        - time
+        - total_price
+        - currency
+        - voucher_qr_payload
+        - guia_asignado
+        - punto_encuentro
+      properties:
+        external_order_id:
+          type: string
+          description: "**CAMPO OBLIGATORIO DE CONTRATO:** Identificador emitido por la tienda de atracciones de Dilan Mendoza para conciliar la orden en Booking."
+          example: "ORD-DILAN-8721"
+        reservation_id:
+          type: string
+          format: uuid
+          description: Identificador único universal de la reserva en base de datos.
+          example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+        reservation_code:
+          type: string
+          description: Localizador PNR alfanumérico amigable para el cliente (ej. `DEC-7F3K9Q`).
+          example: "DEC-7F3K9Q"
+        status:
+          type: string
+          enum: [PENDING, CONFIRMED, CHECKED_IN, COMPLETED, CANCELLED, EXPIRED]
+          description: Estado del ciclo de vida de la reserva conforme a la máquina de estados de 6 fases.
+          example: "CONFIRMED"
+        date:
+          type: string
+          format: date
+          example: "2026-10-25"
+        time:
+          type: string
+          example: "10:30 a.m."
+        ticket_count:
+          type: integer
+          description: Cantidad total de boletos emitidos.
+          example: 3
+        adult_count:
+          type: integer
+          example: 2
+        child_count:
+          type: integer
+          example: 1
+        senior_count:
+          type: integer
+          example: 0
+        student_count:
+          type: integer
+          description: Cantidad de boletos de estudiante emitidos.
+          example: 0
+        infant_count:
+          type: integer
+          example: 0
+        cantidad_adultos:
+          type: integer
+          description: Alias canónico en español para cantidad de adultos.
+          example: 2
+        cantidad_ninos:
+          type: integer
+          description: Alias canónico en español para cantidad de niños.
+          example: 1
+        cantidad_seniors:
+          type: integer
+          description: Alias canónico en español para cantidad de tercera edad.
+          example: 0
+        cantidad_estudiantes:
+          type: integer
+          description: Alias canónico en español para cantidad de estudiantes.
+          example: 0
+        cantidad_infantes:
+          type: integer
+          description: Alias canónico en español para cantidad de infantes.
+          example: 0
+        total_price:
+          type: number
+          description: Monto total liquidado en USD.
+          example: 75.00
+        currency:
+          type: string
+          example: "USD"
+        fecha:
+          type: string
+          format: date
+          description: Alias canónico en español para fecha de la actividad.
+          example: "2026-10-25"
+        hora:
+          type: string
+          description: Alias canónico en español para hora del turno.
+          example: "10:30 a.m."
+        precio_total:
+          type: number
+          description: Alias canónico en español para monto total liquidado.
+          example: 75.00
+        moneda:
+          type: string
+          description: Alias canónico en español para código de divisa.
+          example: "USD"
+        estado:
+          type: string
+          description: Alias canónico en español para estado de la reserva.
+          example: "CONFIRMED"
+        customer:
+          $ref: '#/components/schemas/CustomerContactDto'
+        guia_asignado:
+          type: string
+          description: Nombre del guía turístico oficial asignado para la experiencia.
+          example: "Lic. Carlos Morales (Credencial Mintur #5541)"
+        punto_encuentro:
+          type: string
+          example: "Boulevard Naciones Unidas y Av. Shyris (Parada Quinde)"
+        voucher_qr_payload:
+          type: string
+          description: Cadena encriptada/firmada para renderizar el código QR que se escaneará en el check-in presencial.
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZXNfaWQiOiJmNDdhYzEwYi01OGNjLTQzNzItYTU2Ny0wZTAyYjJjM2Q0NzkiLCJkb2MiOiIxNzIzNDU2Nzg5In0.sign"
+        voucher_qr_url:
+          type: string
+          description: Enlace directo para renderizar la imagen PNG del código QR.
+          example: "https://api.descubreec.com/vouchers/DEC-7F3K9Q/qr.png"
+        ics_calendar_url:
+          type: string
+          description: Enlace de descarga del archivo `.ics` para sincronizar con Google Calendar / Apple iCal.
+          example: "https://api.descubreec.com/vouchers/DEC-7F3K9Q/evento.ics"
+        reembolso_id:
+          type: string
+          description: Identificador unívoco del reembolso financiero emitido ante cancelación o compensación Saga (ej. `REF-ATR-7F3K9Q`).
+          example: "REF-ATR-7F3K9Q"
+        monto_reembolsado:
+          type: number
+          description: Monto total liquidado y reembolsado en USD al 100% ante cancelación.
+          example: 75.00
+        _links:
+          type: object
+          description: Hipermedios HATEOAS Nivel 3.
+          properties:
+            self:
+              type: string
+              example: "/api/v3/atracciones/reservas/f47ac10b-58cc-4372-a567-0e02b2c3d479"
+            checkin:
+              type: string
+              example: "/api/v3/atracciones/reservas/f47ac10b-58cc-4372-a567-0e02b2c3d479/checkin"
+            cancel:
+              type: string
+              example: "/api/v3/atracciones/reservas/f47ac10b-58cc-4372-a567-0e02b2c3d479/cancel"
+
+    CancelReservationRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          description: Motivo de la cancelación o código de contingencia Saga.
+          example: "SAGA_COMPENSATION_PARTNER_FAILURE"
+        solicitante:
+          type: string
+          enum: [CLIENTE, SAGA_ORCHESTRATOR, ADMIN]
+          default: CLIENTE
+          example: "SAGA_ORCHESTRATOR"
+
+    CheckinRequest:
+      type: object
+      required:
+        - documento_identidad
+      properties:
+        documento_identidad:
+          type: string
+          description: Documento de identidad físico presentado por el titular en el punto de encuentro.
+          example: "1723456789"
+        codigo_voucher_qr:
+          type: string
+          description: Payload o texto decodificado del código QR presentado por el cliente.
+          example: "DEC-7F3K9Q"
+        guia_codigo:
+          type: string
+          description: Identificador del guía que realiza la verificación en el punto de encuentro.
+          example: "GUIA-CARLOS-01"
+        scanner_device_id:
+          type: string
+          description: Identificador del dispositivo móvil o terminal que realizó el escaneo.
+          example: "SCANNER-TERMINAL-04"
+
+    CheckinResponse:
+      type: object
+      required:
+        - reserva_id
+        - estado
+        - titular_nombre
+        - titular_documento
+        - guia_asignado
+        - punto_encuentro
+        - hora_checkin
+      properties:
+        reserva_id:
+          type: string
+          example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+        reservation_code:
+          type: string
+          example: "DEC-7F3K9Q"
+        estado:
+          type: string
+          enum: [CHECKED_IN]
+          example: "CHECKED_IN"
+        titular_nombre:
+          type: string
+          example: "Paúl Rosero"
+        titular_documento:
+          type: string
+          example: "1723456789"
+        guia_asignado:
+          type: string
+          example: "Lic. Carlos Morales"
+        punto_encuentro:
+          type: string
+          example: "Boulevard Naciones Unidas y Av. Shyris (Parada Quinde)"
+        hora_checkin:
+          type: string
+          format: date-time
+          description: Timestamp ISO 8601 UTC en que se validó la presencia física del turista.
+          example: "2026-10-25T08:45:12Z"
+        pase_abordar_qr:
+          type: string
+          description: Código QR oficial de acceso al autobús o atracción.
+          example: "https://api.descubreec.com/boarding-passes/DEC-7F3K9Q.png"
+
+    PromocionesContratoResponse:
+      type: object
+      required:
+        - proveedor_id
+        - permite_promociones
+        - porcentaje_descuento_maximo
+        - destinos_habilitados
+        - vigencia_hasta
+      properties:
+        proveedor_id:
+          type: string
+          example: "proveedor-atracciones-dilan"
+        nombre_comercial:
+          type: string
+          example: "Descubre EC"
+        permite_promociones:
+          type: boolean
+          description: Autorización formal para que Booking Prototipo arme paquetes combinados.
+          example: true
+        porcentaje_descuento_maximo:
+          type: number
+          description: Porcentaje tope de descuento acordado para combos turísticos (ej. 15.0 = 15%).
+          example: 15.0
+        destinos_habilitados:
+          type: array
+          items:
+            type: string
+          example: ["Quito", "Baños", "Cuenca", "Galápagos"]
+        fecha_acuerdo:
+          type: string
+          format: date
+          example: "2026-10-01"
+        vigencia_hasta:
+          type: string
+          format: date
+          example: "2027-12-31"
+        condiciones_combo:
+          type: string
+          example: "Aplica en paquetes de al menos 2 servicios en la misma ciudad de destino con un mínimo de 48 horas de anticipación."
+
+    ActualizarPromocionesContratoRequest:
+      type: object
+      required:
+        - permite_promociones
+        - porcentaje_descuento_maximo
+      properties:
+        permite_promociones:
+          type: boolean
+          description: "Pregunta obligatoria 1: ¿Acepta participar en la creación de promociones y combos de paquetes turísticos multidominio con Booking Prototipo?"
+          example: true
+        porcentaje_descuento_maximo:
+          type: number
+          minimum: 0
+          maximum: 50
+          description: "Pregunta obligatoria 2: Si acepta hacer promociones, ¿cuál es el porcentaje máximo de descuento que está dispuesto a aplicar sobre su tarifa pública? (0.0 a 50.0%)"
+          example: 15.0
+        destinos_habilitados:
+          type: array
+          description: Lista de ciudades o destinos donde aplica el descuento promocional.
+          items:
+            type: string
+          example: ["Quito", "Baños", "Cuenca", "Galápagos"]
+        vigencia_hasta:
+          type: string
+          format: date
+          description: Fecha límite hasta la cual el partner garantiza mantener este acuerdo comercial.
+          example: "2027-12-31"
+        condiciones_combo:
+          type: string
+          description: Restricciones de operación (anticipación mínima, no reembolsable en temporadas altas, etc.).
+          example: "Aplica en paquetes de al menos 2 servicios en la misma ciudad de destino con un mínimo de 48 horas de anticipación."
+        contacto_comercial:
+          type: object
+          properties:
+            nombre:
+              type: string
+              example: "Dilan Mendoza"
+            email:
+              type: string
+              format: email
+              example: "dilan.mendoza@descubreec.com"
+            telefono:
+              type: string
+              example: "+593998765432"
+
+    OutboxEventItem:
+      type: object
+      description: Evento de integración para arquitecturas orientadas a eventos (EDA) conforme al estándar CloudEvents v1.0 (Semana 8 & Consideraciones RDA2).
+      required:
+        - specversion
+        - source
+        - event_id
+        - sequence_number
+        - event_type
+        - aggregate_id
+        - correlation_id
+        - timestamp
+        - payload
+      properties:
+        specversion:
+          type: string
+          description: Versión de la especificación CloudEvents (v1.0 obligatorio de cátedra).
+          example: "1.0"
+        source:
+          type: string
+          description: Identificador URI del microservicio productor emisor del evento.
+          example: "/api/v3/atracciones"
+        event_id:
+          type: string
+          format: uuid
+          description: Identificador universal único del evento (CloudEvents id).
+          example: "e55a12f9-71c2-4a0b-87d3-0570b24dc6c1"
+        sequence_number:
+          type: integer
+          description: Número monótono creciente que facilita el consumo secuencial por cursor (`after`).
+          example: 1043
+        event_type:
+          type: string
+          enum: [RESERVA_CREADA, RESERVA_CONFIRMADA, STOCK_ACTUALIZADO, RESERVA_CANCELADA]
+          description: Tipo de evento de dominio publicado hacia los brokers RabbitMQ y Apache Kafka.
+          example: "RESERVA_CONFIRMADA"
+        aggregate_id:
+          type: string
+          description: Identificador de la reserva o atracción afectada.
+          example: "DEC-7F3K9Q"
+        correlation_id:
+          type: string
+          description: Identificador de correlación unívoco para trazabilidad distribuida cross-broker.
+          example: "cid-8821a"
+        timestamp:
+          type: string
+          format: date-time
+          description: Marca de tiempo ISO 8601 UTC en que se emitió el evento.
+          example: "2026-10-21T16:44:01Z"
+        payload:
+          type: object
+          description: Carga útil con los datos minimizados del evento.
+        data:
+          type: object
+          description: Alias oficial CloudEvents v1.0 para el payload del evento y datos minimizados del evento según el estándar canónico de eventos EDA.
+
+    NodeHealthResponse:
+      type: object
+      required:
+        - status
+        - node_id
+        - node_code
+        - version
+        - database_connected
+        - latency_ms
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [UP, DEGRADED, DOWN]
+          example: "UP"
+        node_id:
+          type: string
+          example: "node-dilan-atracciones-01"
+        node_code:
+          type: string
+          example: "DILAN_ATRACCIONES"
+        url_base:
+          type: string
+          example: "https://descubreec.com/api/v1"
+        version:
+          type: string
+          example: "2.0.0"
+        database_connected:
+          type: boolean
+          example: true
+        latency_ms:
+          type: integer
+          description: Tiempo de respuesta del chequeo interno en milisegundos.
+          example: 18
+        memory_usage_mb:
+          type: number
+          example: 142.5
+        uptime_seconds:
+          type: integer
+          example: 86400
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-10-21T16:44:01Z"
+
+    SlotMismatchProblem:
+      type: object
+      required:
+        - type
+        - title
+        - status
+        - detail
+        - code
+        - instance
+      properties:
+        type:
+          type: string
+          example: "https://booking.epn.edu.ec/errors/slot-mismatch"
+        title:
+          type: string
+          example: "Inconsistencia de Franja Horaria (Slot Mismatch)"
+        status:
+          type: integer
+          example: 400
+        detail:
+          type: string
+          example: "El slot_id 'slot-20261025-1030' corresponde a las 10:30:00 del 2026-10-25, pero se envió 'time': '14:00:00'."
+        instance:
+          type: string
+          example: "/api/v3/atracciones/reservas"
+        code:
+          type: string
+          example: "SLOT_TIME_MISMATCH"
+        correlation_id:
+          type: string
+          example: "cid-v3-error-1"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-10-26T20:20:00Z"
+
+    OutOfStockProblem:
+      type: object
+      required:
+        - type
+        - title
+        - status
+        - detail
+        - code
+        - instance
+      properties:
+        type:
+          type: string
+          example: "https://booking.epn.edu.ec/errors/sin-cupos"
+        title:
+          type: string
+          example: "Cupos Agotados para el Turno Horario (Saga Compensation Trigger)"
+        status:
+          type: integer
+          example: 409
+        detail:
+          type: string
+          example: "No existen suficientes cupos disponibles en el turno seleccionado. Activa compensación LIFO en Saga."
+        instance:
+          type: string
+          example: "/api/v3/atracciones/reservas"
+        code:
+          type: string
+          example: "OUT_OF_STOCK"
+        correlation_id:
+          type: string
+          example: "corr-stock-out-1"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-10-26T20:20:00Z"
+
+    UnprocessableEntityProblem:
+      type: object
+      required:
+        - type
+        - title
+        - status
+        - detail
+        - code
+        - instance
+      properties:
+        type:
+          type: string
+          example: "https://booking.epn.edu.ec/errors/unprocessable-entity"
+        title:
+          type: string
+          example: "Validación Semántica Fallida (No Saga Compensation)"
+        status:
+          type: integer
+          example: 422
+        detail:
+          type: string
+          example: "La fecha de la reserva no puede ser en el pasado o la cantidad de boletos no es válida."
+        instance:
+          type: string
+          example: "/api/v3/atracciones/reservas"
+        code:
+          type: string
+          example: "SEMANTIC_VALIDATION_FAILED"
+        correlation_id:
+          type: string
+          example: "corr-val-error-1"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-10-26T20:20:00Z"
+
+    ProblemDetails:
+      type: object
+      required:
+        - type
+        - title
+        - status
+        - detail
+      properties:
+        type:
+          type: string
+          description: URI que identifica el tipo de error bajo estándar RFC 7807.
+          example: "https://booking.epn.edu.ec/errors/sin-cupos"
+        title:
+          type: string
+          description: Resumen corto y legible del problema.
+          example: "Cupos Agotados para el Turno Horario"
+        status:
+          type: integer
+          description: Código de estado HTTP correspondiente.
+          example: 409
+        detail:
+          type: string
+          description: Explicación detallada de la ocurrencia del error.
+          example: "No existen suficientes cupos disponibles en el turno seleccionado (10:30 a.m.). Cupos restantes: 1, solicitados: 2."
+        instance:
+          type: string
+          description: URI de la solicitud que originó el error.
+          example: "/api/v3/atracciones/reservas"
+        code:
+          type: string
+          description: Código nemotécnico interno para evaluación en código.
+          example: "OUT_OF_STOCK"
+        correlation_id:
+          type: string
+          description: Identificador de correlación propagado para rastrear el fallo en los logs y spans de Jaeger.
+          example: "cid-8821a"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-10-21T16:44:01Z"
+        invalid_params:
+          type: array
+          description: Lista de campos con error en caso de fallo de validación HTTP 400/422.
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                example: "customer.phone"
+              reason:
+                type: string
+                example: "El formato debe ser internacional E.164 o número celular válido de Ecuador (09XXXXXXXX)."
+
+  responses:
+    ProblemDetails401:
+      description: No autenticado. Cabecera Authorization con token JWT o X-API-Key ausente o inválida (RFC 7807).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://descubreec.com/errors/unauthorized"
+            title: "No Autorizado"
+            status: 401
+            detail: "El token JWT no fue provisto, ha expirado o la firma criptográfica es inválida."
+            instance: "/api/v3/atracciones/reservas"
+            code: "UNAUTHORIZED"
+            correlation_id: "cid-auth-01"
+            timestamp: "2026-10-24T15:00:00Z"
+
+    ProblemDetails403:
+      description: Acceso denegado. El usuario no posee los permisos o roles requeridos (RFC 7807).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://descubreec.com/errors/forbidden"
+            title: "Acceso Prohibido"
+            status: 403
+            detail: "No cuenta con el rol de administración o credenciales de socio requeridas para esta acción."
+            instance: "/api/v3/atracciones/promociones/contrato"
+            code: "FORBIDDEN"
+            correlation_id: "cid-auth-02"
+            timestamp: "2026-10-24T15:00:00Z"
+
+    ProblemDetails400:
+      description: Parámetros inválidos o sintaxis de solicitud incorrecta (RFC 7807).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+    ProblemDetails404:
+      description: Recurso no encontrado en el sistema de atracciones (RFC 7807).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+    ProblemDetails409:
+      description: Conflicto de estado, colisión de Idempotencia o Cupos Agotados (RFC 7807).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+    ProblemDetails422:
+      description: Entidad no procesable (ej. fallo algorítmico en la cédula ecuatoriana).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+    ProblemDetails500:
+      description: Error interno del servidor en la tienda socia (RFC 7807).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+    ProblemDetails503:
+      description: Servicio no disponible o circuito abierto temporalmente (RFC 7807).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Token JWT emitido conforme al estándar RFC 7519 para autenticación de usuarios y consumo de microservicios (RDA2 Semana 11).  
+        Se transmite en la cabecera `Authorization: Bearer <token>`.
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: |
+        Clave de API precompartida para comunicación máquina a máquina (M2M) e interconexión segura entre Booking Prototipo y Descubre EC.

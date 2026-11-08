@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ms_billing_profile — esquemas de petición",
+  "version": "1.0.0",
+  "x-generado": "GENERADO desde src/definicion.mjs con contratos/exportar-esquemas.mjs (code-first). No editar a mano: cambie el código y vuelva a exportar.",
+  "$defs": {
+    "crear": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identificacion",
+        "razon_social",
+        "correo"
+      ],
+      "properties": {
+        "tipo_identificacion": {
+          "type": "string",
+          "enum": [
+            "CEDULA",
+            "RUC",
+            "PASAPORTE",
+            "CONSUMIDOR_FINAL"
+          ]
+        },
+        "identificacion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20
+        },
+        "razon_social": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 150,
+          "pattern": "\\S"
+        },
+        "correo": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 160
+        },
+        "telefono": {
+          "type": "string",
+          "pattern": "^\\+?[0-9]{7,15}$"
+        },
+        "es_principal": {
+          "type": "boolean"
+        }
+      }
+    },
+    "cambiar": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "tipo_identificacion": {
+          "type": "string",
+          "enum": [
+            "CEDULA",
+            "RUC",
+            "PASAPORTE",
+            "CONSUMIDOR_FINAL"
+          ]
+        },
+        "identificacion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20
+        },
+        "razon_social": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 150,
+          "pattern": "\\S"
+        },
+        "correo": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 160
+        },
+        "telefono": {
+          "type": "string",
+          "pattern": "^\\+?[0-9]{7,15}$"
+        },
+        "es_principal": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

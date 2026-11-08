@@ -1,0 +1,103 @@
+// CONTRATO gRPC de ms_inventory (Inventory & Availability Service) — Descubre EC / Atracciones
+// Base de datos propia: ms_inventory (tablas horario, disponibilidad, fecha_bloqueada).
+// Los nombres de campo son los de la base del equipo (hor_*, dis_*, fb_*). Versión del contrato: 1.0.0 (SemVer).
+// Reglas de datos adicionales (rangos, patrones, formatos) están en schemas/requests.json y se validan con AJV.
+syntax = "proto3";
+package ms_inventory.v1;
+
+service InventoryService {
+  // --- Administración de horarios ---
+  rpc CreateHorario (CreateHorarioRequest) returns (Horario);
+  rpc ListHorarios (ListHorariosRequest) returns (ListHorariosResponse);                 // paginado
+  // --- Disponibilidad por fecha ---
+  rpc GenerateAvailability (GenerateAvailabilityRequest) returns (GenerateAvailabilityResponse);
+  rpc ListAvailability (ListAvailabilityRequest) returns (ListAvailabilityResponse);     // paginado
+  rpc GetAvailability (GetAvailabilityRequest) returns (Availability);
+  // --- Operaciones de la Saga (reservar / compensar) ---
+  rpc ReserveSlots (SlotChangeRequest) returns (SlotChangeResponse);   // sin cupo => success=false, error_code=OUT_OF_STOCK
+  rpc ReleaseSlots (SlotChangeRequest) returns (SlotChangeResponse);   // compensación
+  rpc BlockDate (BlockDateRequest) returns (FechaBloqueada);
+  // --- Integración con Booking (este servicio es CLIENTE gRPC de inventory.proto de Booking) ---
+  rpc SyncToBooking (SyncRequest) returns (SyncResponse);              // reenvía el cupo actual con PushStockUpdate
+  rpc GetSyncStatus (Empty) returns (SyncStatus);
+}
+
+message Empty {}
+
+message PageMeta {
+  int32 total_results = 1;
+  int32 page = 2;
+  int32 limit = 3;
+  int32 total_pages = 4;
+}
+
+message Horario {
+  int64 hor_id = 1;
+  int64 atr_id = 2;          // ID lógico (Catalog)
+  string hor_hora = 3;       // "HH:MM"
+  int32 hor_cupo = 4;
+  bool hor_activo = 5;
+}
+message CreateHorarioRequest {
+  int64 atr_id = 1;
+  string hor_hora = 2;       // "HH:MM" (24 h)
+  int32 hor_cupo = 3;        // por defecto 20 si se omite
+}
+message ListHorariosRequest { int64 atr_id = 1; int32 page = 2; int32 limit = 3; }
+message ListHorariosResponse { repeated Horario data = 1; PageMeta metadata = 2; }
+
+message GenerateAvailabilityRequest {
+  int64 atr_id = 1;
+  string fecha_desde = 2;    // YYYY-MM-DD
+  string fecha_hasta = 3;    // YYYY-MM-DD (máximo 62 días de rango)
+}
+message GenerateAvailabilityResponse { int32 creadas = 1; int32 omitidas_por_bloqueo_o_existentes = 2; }
+
+message Availability {
+  int64 dis_id = 1;
+  int64 atr_id = 2;
+  int64 hor_id = 3;
+  string dis_fecha = 4;            // YYYY-MM-DD
+  string hor_hora = 5;             // "HH:MM"
+  int32 dis_cupo_total = 6;
+  int32 dis_cupo_reservado = 7;
+  int32 cupos_disponibles = 8;     // = dis_cupo_total - dis_cupo_reservado
+  bool dis_cerrada = 9;
+  string slot_id = 10;             // slot-YYYYMMDD-HHMM (canónico de Booking)
+}
+message GetAvailabilityRequest { int64 dis_id = 1; }
+message ListAvailabilityRequest {
+  int64 atr_id = 1;
+  string fecha_desde = 2;
+  string fecha_hasta = 3;
+  bool solo_con_cupo = 4;
+  int32 page = 5;
+  int32 limit = 6;
+}
+message ListAvailabilityResponse { repeated Availability data = 1; PageMeta metadata = 2; }
+
+message SlotChangeRequest {
+  int64 dis_id = 1;
+  int32 cantidad = 2;              // cupos a reservar / liberar
+}
+message SlotChangeResponse {
+  bool success = 1;
+  string error_code = 2;           // "" | OUT_OF_STOCK | SLOT_CLOSED | INVALID_RELEASE
+  string message = 3;
+  Availability availability = 4;
+}
+
+message BlockDateRequest { int64 atr_id = 1; string fb_fecha = 2; string fb_motivo = 3; }
+message FechaBloqueada { int64 fb_id = 1; int64 atr_id = 2; string fb_fecha = 3; string fb_motivo = 4; int32 slots_cerrados = 5; }
+
+message SyncRequest { int64 dis_id = 1; }
+message SyncResponse { bool success = 1; string error_code = 2; string message = 3; }
+message SyncStatus {
+  bool enabled = 1;
+  string target = 2;
+  int32 sent_ok = 3;
+  int32 sent_failed = 4;
+  int32 stale_ignored = 5;
+  string last_ok_at = 6;
+  string last_error = 7;
+}

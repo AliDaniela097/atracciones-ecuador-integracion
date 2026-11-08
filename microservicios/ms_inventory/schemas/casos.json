@@ -1,0 +1,33 @@
+{
+  "Empty": { "validos": [{}], "invalidos": [{ "descripcion": "campo desconocido", "datos": { "x": 1 } }] },
+  "CreateHorarioRequest": {
+    "validos": [{ "atr_id": 1001, "hor_hora": "09:00", "hor_cupo": 20 }, { "atr_id": 1001, "hor_hora": "14:30" }],
+    "invalidos": [
+      { "descripcion": "hora fuera de rango", "datos": { "atr_id": 1001, "hor_hora": "25:00" } },
+      { "descripcion": "falta atr_id", "datos": { "hor_hora": "09:00" } },
+      { "descripcion": "cupo cero", "datos": { "atr_id": 1001, "hor_hora": "09:00", "hor_cupo": 0 } }
+    ]
+  },
+  "ListHorariosRequest": {
+    "validos": [{ "atr_id": 1001 }, { "atr_id": 1001, "page": 2, "limit": 10 }],
+    "invalidos": [{ "descripcion": "limit mayor al máximo (100)", "datos": { "atr_id": 1001, "limit": 500 } }, { "descripcion": "page cero", "datos": { "atr_id": 1001, "page": 0 } }]
+  },
+  "GenerateAvailabilityRequest": {
+    "validos": [{ "atr_id": 1001, "fecha_desde": "2026-11-01", "fecha_hasta": "2026-11-30" }],
+    "invalidos": [{ "descripcion": "fecha con formato incorrecto", "datos": { "atr_id": 1001, "fecha_desde": "01/11/2026", "fecha_hasta": "2026-11-30" } }, { "descripcion": "falta fecha_hasta", "datos": { "atr_id": 1001, "fecha_desde": "2026-11-01" } }]
+  },
+  "ListAvailabilityRequest": {
+    "validos": [{ "atr_id": 1001 }, { "atr_id": 1001, "fecha_desde": "2026-11-01", "solo_con_cupo": true, "page": 1, "limit": 20 }],
+    "invalidos": [{ "descripcion": "atr_id negativo", "datos": { "atr_id": -5 } }, { "descripcion": "fecha imposible (31 de febrero)", "datos": { "atr_id": 1001, "fecha_desde": "2026-02-31" } }]
+  },
+  "GetAvailabilityRequest": { "validos": [{ "dis_id": 7 }], "invalidos": [{ "descripcion": "dis_id cero", "datos": { "dis_id": 0 } }, { "descripcion": "falta dis_id", "datos": {} }] },
+  "SlotChangeRequest": {
+    "validos": [{ "dis_id": 7, "cantidad": 2 }],
+    "invalidos": [{ "descripcion": "cantidad cero", "datos": { "dis_id": 7, "cantidad": 0 } }, { "descripcion": "cantidad excesiva", "datos": { "dis_id": 7, "cantidad": 101 } }, { "descripcion": "falta cantidad", "datos": { "dis_id": 7 } }]
+  },
+  "BlockDateRequest": {
+    "validos": [{ "atr_id": 1001, "fb_fecha": "2026-12-25", "fb_motivo": "Navidad" }],
+    "invalidos": [{ "descripcion": "motivo muy corto", "datos": { "atr_id": 1001, "fb_fecha": "2026-12-25", "fb_motivo": "ab" } }, { "descripcion": "falta fecha", "datos": { "atr_id": 1001, "fb_motivo": "Navidad" } }]
+  },
+  "SyncRequest": { "validos": [{ "dis_id": 3 }], "invalidos": [{ "descripcion": "dis_id texto", "datos": { "dis_id": "abc" } }] }
+}

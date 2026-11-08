@@ -1,0 +1,31 @@
+{
+  "OrderItemInput": {
+    "validos": [{ "atr_id": 1001, "det_descripcion": "Tour Centro Histórico de Quito", "det_cantidad": 2, "det_precio_unitario": 25 }, { "atr_id": 1001, "det_descripcion": "Infante", "det_cantidad": 1, "det_precio_unitario": 0 }],
+    "invalidos": [{ "descripcion": "cantidad cero", "datos": { "atr_id": 1001, "det_descripcion": "x", "det_cantidad": 0, "det_precio_unitario": 10 } }, { "descripcion": "precio negativo", "datos": { "atr_id": 1001, "det_descripcion": "x", "det_cantidad": 1, "det_precio_unitario": -1 } }, { "descripcion": "falta precio", "datos": { "atr_id": 1001, "det_descripcion": "x", "det_cantidad": 1 } }]
+  },
+  "CreateOrderRequest": {
+    "validos": [
+      { "usu_id": 5, "items": [{ "atr_id": 1001, "det_descripcion": "Tour Quito", "det_cantidad": 2, "det_precio_unitario": 25 }] },
+      { "usu_id": 5, "car_id": 9, "mpa_id": 1, "items": [{ "atr_id": 1001, "det_descripcion": "Tour Quito", "det_cantidad": 1, "det_precio_unitario": 12.5 }], "cup_ids": [3], "ord_descuento": 2.5, "ord_iva": 1.5, "ord_moneda": "USD", "idempotency_key": "6f1b3c1e-5a7d-4f0a-9a43-7d1c8f0e2b11" }
+    ],
+    "invalidos": [
+      { "descripcion": "sin items", "datos": { "usu_id": 5, "items": [] } },
+      { "descripcion": "falta usu_id", "datos": { "items": [{ "atr_id": 1001, "det_descripcion": "x", "det_cantidad": 1, "det_precio_unitario": 1 }] } },
+      { "descripcion": "moneda en minúsculas", "datos": { "usu_id": 5, "ord_moneda": "usd", "items": [{ "atr_id": 1001, "det_descripcion": "x", "det_cantidad": 1, "det_precio_unitario": 1 }] } },
+      { "descripcion": "idempotency_key no es UUID", "datos": { "usu_id": 5, "idempotency_key": "123", "items": [{ "atr_id": 1001, "det_descripcion": "x", "det_cantidad": 1, "det_precio_unitario": 1 }] } },
+      { "descripcion": "cupones repetidos", "datos": { "usu_id": 5, "cup_ids": [2, 2], "items": [{ "atr_id": 1001, "det_descripcion": "x", "det_cantidad": 1, "det_precio_unitario": 1 }] } }
+    ]
+  },
+  "GetOrderRequest": {
+    "validos": [{ "ord_id": 1 }, { "ord_numero": "ORD-261027-ABC234" }],
+    "invalidos": [{ "descripcion": "ninguno de los dos", "datos": {} }, { "descripcion": "los dos a la vez", "datos": { "ord_id": 1, "ord_numero": "ORD-1" } }]
+  },
+  "ListOrdersRequest": {
+    "validos": [{}, { "usu_id": 5, "est_codigo": "PAGADA", "page": 2, "limit": 10 }],
+    "invalidos": [{ "descripcion": "estado inexistente", "datos": { "est_codigo": "HECHA" } }, { "descripcion": "limit excesivo", "datos": { "limit": 1000 } }]
+  },
+  "UpdateOrderStatusRequest": {
+    "validos": [{ "ord_id": 1, "est_codigo": "PAGADA" }],
+    "invalidos": [{ "descripcion": "no se puede volver a CREADA", "datos": { "ord_id": 1, "est_codigo": "CREADA" } }, { "descripcion": "falta ord_id", "datos": { "est_codigo": "PAGADA" } }]
+  }
+}

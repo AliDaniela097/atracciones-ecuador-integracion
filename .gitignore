@@ -1,0 +1,25 @@
+# Secretos (NUNCA a Git)
+.env
+.env.*
+!.env.example
+!.env.ms.example
+deploy/azure-settings.json
+deploy/health.json
+
+# Dependencias y compilados
+node_modules/
+dist/
+backend/public/
+deploy/stage/
+deploy/deploy.zip
+
+# Zips y respaldos de trabajo
+*.zip
+*.tgz
+_to_delete/
+
+# Sistema / editor
+.DS_Store
+Thumbs.db
+.vscode/
+*.log

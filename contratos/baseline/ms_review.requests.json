@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ms_review — esquemas de petición",
+  "version": "1.0.0",
+  "x-generado": "GENERADO desde src/definicion.mjs con contratos/exportar-esquemas.mjs (code-first). No editar a mano: cambie el código y vuelva a exportar.",
+  "$defs": {
+    "resena": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "puntuacion",
+        "comentario"
+      ],
+      "properties": {
+        "puntuacion": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "comentario": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 1000,
+          "pattern": "\\S"
+        },
+        "autor_nombre": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "\\S"
+        }
+      }
+    },
+    "visible": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "visible"
+      ],
+      "properties": {
+        "visible": {
+          "type": "boolean"
+        }
+      }
+    },
+    "lista": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "puntuacion": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        }
+      }
+    }
+  }
+}

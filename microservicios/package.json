@@ -1,0 +1,42 @@
+{
+  "name": "atracciones-microservicios",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Microservicios de Alisson: 3 gRPC con la Saga (ms_inventory, ms_order, ms_booking) + 13 servicios nuevos (11 REST, 1 gRPC, 1 SOAP), una base de datos por servicio",
+  "workspaces": [
+    "ms_inventory",
+    "ms_order",
+    "ms_booking",
+    "ms_identity",
+    "ms_billing_profile",
+    "ms_location",
+    "ms_catalog",
+    "ms_review",
+    "ms_cart",
+    "ms_coupon",
+    "ms_payment",
+    "ms_refund",
+    "ms_support",
+    "ms_audit",
+    "ms_pricing",
+    "ms_invoicing"
+  ],
+  "scripts": {
+    "db:migrate": "npm run db:migrate --workspaces --if-present",
+    "test:schemas": "npm run test:schemas --workspaces --if-present",
+    "start:all": "node scripts/start-all.mjs",
+    "mock:booking": "node scripts/booking-mock.mjs",
+    "e2e": "node scripts/e2e.mjs",
+    "demo": "node scripts/demo.mjs",
+    "hub": "node scripts/start-hub.mjs",
+    "test:ms13": "node scripts/test-ms13.mjs todo"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "fast-xml-parser": "^5.11.2"
+  }
+}

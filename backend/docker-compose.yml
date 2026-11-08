@@ -1,0 +1,32 @@
+# Uso típico (BD en Neon, ya configurada en .env):
+#   docker compose up --build -d api
+# Para probar todo SIN Neon ni Booking real:
+#   docker compose --profile local up --build        (Postgres local + Booking simulado)
+services:
+  api:
+    build: .
+    env_file: .env
+    environment:
+      PORT: 3000
+    ports: ["3000:3000"]
+    # Permite alcanzar un Booking que corre en el host (Docker Desktop en Windows/Mac ya lo resuelve; en Linux hace falta esto)
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    restart: unless-stopped
+
+  # --- Solo con --profile local ---
+  db:
+    profiles: ["local"]
+    image: postgres:16-alpine
+    environment: { POSTGRES_USER: atr, POSTGRES_PASSWORD: atr, POSTGRES_DB: atr }
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U atr"], interval: 5s, retries: 10 }
+
+  booking-mock:
+    profiles: ["local"]
+    build: .
+    command: ["node", "scripts/booking-mock.mjs"]
+    ports: ["50051:50051"]
+
+volumes:
+  pgdata:

@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ms_coupon — esquemas de petición",
+  "version": "1.0.0",
+  "x-generado": "GENERADO desde src/definicion.mjs con contratos/exportar-esquemas.mjs (code-first). No editar a mano: cambie el código y vuelva a exportar.",
+  "$defs": {
+    "crear": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "codigo",
+        "tipo",
+        "valor",
+        "fecha_inicio"
+      ],
+      "properties": {
+        "codigo": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{3,30}$"
+        },
+        "tipo": {
+          "type": "string",
+          "enum": [
+            "PORCENTAJE",
+            "FIJO"
+          ]
+        },
+        "valor": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "multipleOf": 0.01
+        },
+        "fecha_inicio": {
+          "type": "string",
+          "format": "date"
+        },
+        "fecha_fin": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "usos_max": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "activo": {
+          "type": "boolean"
+        }
+      }
+    },
+    "cambiar": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "fecha_fin": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "usos_max": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "activo": {
+          "type": "boolean"
+        },
+        "valor": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "multipleOf": 0.01
+        }
+      }
+    },
+    "validar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "codigo",
+        "subtotal"
+      ],
+      "properties": {
+        "codigo": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30
+        },
+        "subtotal": {
+          "type": "number",
+          "minimum": 0,
+          "multipleOf": 0.01
+        },
+        "usos_actuales": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "lista": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "activo": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

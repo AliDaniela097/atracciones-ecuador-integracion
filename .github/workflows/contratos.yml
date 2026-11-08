@@ -1,0 +1,16 @@
+# Semana 7 (7.5): chequeo de compatibilidad en CI. Falla el Pull Request si un contrato rompe la compatibilidad hacia atrás.
+name: contratos
+on:
+  pull_request:
+    paths: ['contratos/**', 'microservicios/**/schemas/**', 'microservicios/**/proto/**', 'backend/contracts/**']
+jobs:
+  compatibilidad:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+        working-directory: backend            # para js-yaml (lectura del OpenAPI)
+      - run: node contratos/test-compat.mjs
+      - run: node contratos/check-compat.mjs

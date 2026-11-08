@@ -1,0 +1,37 @@
+# Equivalente DECLARATIVO del borde de la tienda (Semana 8, 8.3: Kong en modo DB-less, kong.yml versionado en Git).
+# ESTADO: NO está desplegado. El borde que corre hoy es el módulo de NestJS backend/src/gateway/ (misma política, ver gateway/README.md).
+# Este archivo sirve para (a) revisar la política en un Pull Request y (b) probar Kong localmente con Docker:
+#   docker run --rm -p 8000:8000 -v "${PWD}/gateway/kong.yml:/kong/kong.yml" -e KONG_DATABASE=off -e KONG_DECLARATIVE_CONFIG=/kong/kong.yml -e KONG_PROXY_LISTEN=0.0.0.0:8000 kong:3.7
+#   curl -i http://localhost:8000/api/v3/health
+# NO se ha ejecutado contra Kong real todavía: antes de presentarlo, pruébelo y verifique la sintaxis con la documentación oficial (https://docs.konghq.com).
+# Reglas de negocio: ninguna (el Gateway solo resuelve problemas transversales).
+_format_version: "3.0"
+
+services:
+  # Login y registro: más estrictos contra fuerza bruta (igual que RATE_LIMIT_AUTH_PER_MIN=20 en backend/src/gateway/rate-limit.ts).
+  - name: atracciones-auth
+    url: https://alisson-atracciones-api.azurewebsites.net
+    routes:
+      - name: auth-route
+        paths: ["/api/v3/auth"]
+        strip_path: false
+    plugins:
+      - name: rate-limiting
+        config: { minute: 20, policy: local }
+      - name: correlation-id
+        config: { header_name: X-Correlation-Id, generator: uuid, echo_downstream: true }
+
+  # Resto de la API pública v3 (catálogo, reservas, clientes, ms/...). Proxy simple: reenvía sin transformar.
+  - name: atracciones-api
+    url: https://alisson-atracciones-api.azurewebsites.net
+    routes:
+      - name: api-route
+        paths: ["/api/v3"]
+        strip_path: false
+    plugins:
+      - name: rate-limiting
+        # Límite del tráfico ANÓNIMO. En el backend, los socios (API Key) tienen 600/min y los usuarios autenticados 300/min;
+        # en Kong eso se logra con consumers + key-auth y un rate-limiting por consumer (no se incluye aquí para no versionar claves).
+        config: { minute: 120, policy: local }
+      - name: correlation-id
+        config: { header_name: X-Correlation-Id, generator: uuid, echo_downstream: true }

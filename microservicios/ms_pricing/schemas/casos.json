@@ -1,0 +1,44 @@
+{
+  "CreateTariffRequest": {
+    "validos": [
+      { "atr_id": 1, "tar_tipo": "ADULTO", "tar_precio": 25.5 },
+      { "atr_id": 7, "tar_tipo": "NINO", "tar_precio": 0, "tar_moneda": "USD", "tar_vigente_desde": "2026-11-01" }
+    ],
+    "invalidos": [
+      { "descripcion": "tipo fuera del catálogo", "datos": { "atr_id": 1, "tar_tipo": "VIP", "tar_precio": 10 } },
+      { "descripcion": "precio negativo", "datos": { "atr_id": 1, "tar_tipo": "ADULTO", "tar_precio": -1 } },
+      { "descripcion": "más de dos decimales", "datos": { "atr_id": 1, "tar_tipo": "ADULTO", "tar_precio": 10.555 } },
+      { "descripcion": "falta atr_id", "datos": { "tar_tipo": "ADULTO", "tar_precio": 10 } },
+      { "descripcion": "moneda en minúsculas", "datos": { "atr_id": 1, "tar_tipo": "ADULTO", "tar_precio": 10, "tar_moneda": "usd" } }
+    ]
+  },
+  "CloseTariffRequest": {
+    "validos": [{ "tar_id": 3, "tar_vigente_hasta": "2026-12-31" }],
+    "invalidos": [
+      { "descripcion": "fecha mal formada", "datos": { "tar_id": 3, "tar_vigente_hasta": "31/12/2026" } },
+      { "descripcion": "falta la fecha", "datos": { "tar_id": 3 } }
+    ]
+  },
+  "GetCurrentTariffsRequest": {
+    "validos": [{ "atr_id": 1 }, { "atr_id": 1, "fecha": "2026-11-15" }],
+    "invalidos": [
+      { "descripcion": "atr_id cero", "datos": { "atr_id": 0 } },
+      { "descripcion": "fecha inválida", "datos": { "atr_id": 1, "fecha": "2026-13-45" } }
+    ]
+  },
+  "ListTariffHistoryRequest": {
+    "validos": [{ "atr_id": 1 }, { "atr_id": 1, "tar_tipo": "ADULTO", "page": 2, "limit": 10 }],
+    "invalidos": [
+      { "descripcion": "límite sobre el máximo", "datos": { "atr_id": 1, "limit": 101 } },
+      { "descripcion": "página cero", "datos": { "atr_id": 1, "page": 0 } }
+    ]
+  },
+  "CalculatePriceRequest": {
+    "validos": [{ "atr_id": 1, "adultos": 2, "ninos": 1 }, { "atr_id": 5, "fecha": "2026-12-24", "adultos": 12 }],
+    "invalidos": [
+      { "descripcion": "cantidad negativa", "datos": { "atr_id": 1, "adultos": -1 } },
+      { "descripcion": "campo desconocido", "datos": { "atr_id": 1, "adultos": 1, "vip": true } },
+      { "descripcion": "falta atr_id", "datos": { "adultos": 2 } }
+    ]
+  }
+}

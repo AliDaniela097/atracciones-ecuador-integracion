@@ -1,0 +1,26 @@
+{
+  "name": "ms_booking",
+  "version": "1.0.0",
+  "description": "Microservicio ms_booking (gRPC) — Descubre EC / Atracciones. Base de datos propia.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.mjs",
+    "db:migrate": "node scripts/db.mjs migrate",
+    "db:reset": "node scripts/db.mjs reset",
+    "test:schemas": "node scripts/test-schemas.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.14.6",
+    "@grpc/proto-loader": "^0.8.1",
+    "@neondatabase/serverless": "1.2.0",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "dotenv": "^18.0.9",
+    "pg": "^8.23.1",
+    "ws": "^8.18.0"
+  }
+}

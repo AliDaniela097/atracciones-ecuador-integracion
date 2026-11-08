@@ -1,0 +1,465 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ms_catalog — esquemas de petición",
+  "version": "1.0.0",
+  "x-generado": "GENERADO desde src/definicion.mjs con contratos/exportar-esquemas.mjs (code-first). No editar a mano: cambie el código y vuelva a exportar.",
+  "$defs": {
+    "atraccion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nombre",
+        "descripcion",
+        "tipo",
+        "latitud",
+        "longitud",
+        "duracion_horas",
+        "ciu_id",
+        "ope_id"
+      ],
+      "properties": {
+        "nombre": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "\\S"
+        },
+        "descripcion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20000,
+          "pattern": "\\S"
+        },
+        "descripcion_corta": {
+          "type": "string",
+          "maxLength": 280
+        },
+        "tipo": {
+          "type": "string",
+          "enum": [
+            "GUIDED_TOUR",
+            "ADMISSION",
+            "DAY_TRIP",
+            "TRANSPORT",
+            "PACKAGE"
+          ]
+        },
+        "estado": {
+          "type": "string",
+          "enum": [
+            "BORRADOR",
+            "PUBLICADA",
+            "INACTIVA"
+          ]
+        },
+        "latitud": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "longitud": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        },
+        "direccion": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "punto_encuentro": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "duracion_horas": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 720
+        },
+        "moneda": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "ciu_id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32767
+        },
+        "ope_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cancelacion_gratuita": {
+          "type": "boolean"
+        },
+        "horas_cancelacion": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 32767
+        },
+        "destacada": {
+          "type": "boolean"
+        }
+      }
+    },
+    "atraccionCambio": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "nombre": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "\\S"
+        },
+        "descripcion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20000,
+          "pattern": "\\S"
+        },
+        "descripcion_corta": {
+          "type": "string",
+          "maxLength": 280
+        },
+        "tipo": {
+          "type": "string",
+          "enum": [
+            "GUIDED_TOUR",
+            "ADMISSION",
+            "DAY_TRIP",
+            "TRANSPORT",
+            "PACKAGE"
+          ]
+        },
+        "estado": {
+          "type": "string",
+          "enum": [
+            "BORRADOR",
+            "PUBLICADA",
+            "INACTIVA"
+          ]
+        },
+        "latitud": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "longitud": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        },
+        "direccion": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "punto_encuentro": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "duracion_horas": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 720
+        },
+        "moneda": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "ciu_id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32767
+        },
+        "cancelacion_gratuita": {
+          "type": "boolean"
+        },
+        "horas_cancelacion": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 32767
+        },
+        "destacada": {
+          "type": "boolean"
+        }
+      }
+    },
+    "lista": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "q": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "ciu_id": {
+          "type": "integer"
+        },
+        "cat_id": {
+          "type": "integer"
+        },
+        "tipo": {
+          "type": "string",
+          "enum": [
+            "GUIDED_TOUR",
+            "ADMISSION",
+            "DAY_TRIP",
+            "TRANSPORT",
+            "PACKAGE"
+          ]
+        },
+        "estado": {
+          "type": "string",
+          "enum": [
+            "BORRADOR",
+            "PUBLICADA",
+            "INACTIVA"
+          ]
+        },
+        "ope_id": {
+          "type": "integer"
+        },
+        "destacada": {
+          "type": "boolean"
+        },
+        "min_calificacion": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "orden": {
+          "type": "string",
+          "enum": [
+            "nombre",
+            "calificacion",
+            "reciente"
+          ]
+        }
+      }
+    },
+    "ids": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ids"
+      ],
+      "properties": {
+        "ids": {
+          "type": "array",
+          "maxItems": 50,
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    },
+    "foto": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "alt"
+      ],
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 500,
+          "pattern": "^https?://"
+        },
+        "alt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "\\S"
+        },
+        "orden": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 32767
+        }
+      }
+    },
+    "operador": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "codigo",
+        "nombre",
+        "prov_id"
+      ],
+      "properties": {
+        "codigo": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "nombre": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 150,
+          "pattern": "\\S"
+        },
+        "ruc": {
+          "type": "string",
+          "pattern": "^[0-9]{13}$"
+        },
+        "correo": {
+          "type": "string",
+          "format": "email"
+        },
+        "telefono": {
+          "type": "string",
+          "pattern": "^\\+?[0-9]{7,15}$"
+        },
+        "direccion": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "prov_id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32767
+        },
+        "activo": {
+          "type": "boolean"
+        }
+      }
+    },
+    "operadorCambio": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "nombre": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 150,
+          "pattern": "\\S"
+        },
+        "correo": {
+          "type": "string",
+          "format": "email"
+        },
+        "telefono": {
+          "type": "string",
+          "pattern": "^\\+?[0-9]{7,15}$"
+        },
+        "direccion": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "activo": {
+          "type": "boolean"
+        }
+      }
+    },
+    "operadorUsuario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "usu_id",
+        "cargo"
+      ],
+      "properties": {
+        "usu_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cargo": {
+          "type": "string",
+          "enum": [
+            "ADMIN",
+            "VENDEDOR",
+            "GUIA"
+          ]
+        }
+      }
+    },
+    "categoria": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nombre"
+      ],
+      "properties": {
+        "nombre": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "\\S"
+        },
+        "descripcion": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "icono": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "padre_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "orden": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 32767
+        }
+      }
+    },
+    "inclusion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tipo",
+        "nombre"
+      ],
+      "properties": {
+        "tipo": {
+          "type": "string",
+          "enum": [
+            "INCLUYE",
+            "NO_INCLUYE",
+            "RECOMENDACION"
+          ]
+        },
+        "nombre": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 150,
+          "pattern": "\\S"
+        },
+        "orden": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 32767
+        }
+      }
+    },
+    "evento": {
+      "type": "object",
+      "required": [
+        "tipo"
+      ],
+      "properties": {
+        "tipo": {
+          "type": "string"
+        },
+        "datos": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}

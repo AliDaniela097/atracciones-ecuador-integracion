@@ -1,0 +1,27 @@
+{
+  "PassengerInput": {
+    "validos": [{ "pax_nombre": "Ana Pérez", "pax_documento": "1712345678", "pax_es_titular": true }, { "pax_nombre": "Tom Smith", "pax_documento": "AB1234567", "pax_fecha_nacimiento": "1990-05-17" }],
+    "invalidos": [{ "descripcion": "documento con letras", "datos": { "pax_nombre": "Ana", "pax_documento": "17123abc78" } }, { "descripcion": "nombre vacío", "datos": { "pax_nombre": "" } }, { "descripcion": "fecha de nacimiento imposible", "datos": { "pax_nombre": "Ana", "pax_fecha_nacimiento": "1990-02-30" } }]
+  },
+  "CreateReservationRequest": {
+    "validos": [{ "det_id": 1, "dis_id": 1, "res_adultos": 2, "res_ninos": 1, "res_precio_unitario": 25, "pasajeros": [{ "pax_nombre": "Ana Pérez", "pax_documento": "1712345678", "pax_es_titular": true }] }],
+    "invalidos": [
+      { "descripcion": "cero adultos", "datos": { "det_id": 1, "dis_id": 1, "res_adultos": 0, "res_precio_unitario": 25, "pasajeros": [{ "pax_nombre": "Ana" }] } },
+      { "descripcion": "sin pasajeros", "datos": { "det_id": 1, "dis_id": 1, "res_adultos": 1, "res_precio_unitario": 25, "pasajeros": [] } },
+      { "descripcion": "falta el precio", "datos": { "det_id": 1, "dis_id": 1, "res_adultos": 1, "pasajeros": [{ "pax_nombre": "Ana" }] } },
+      { "descripcion": "pasajero con documento inválido", "datos": { "det_id": 1, "dis_id": 1, "res_adultos": 1, "res_precio_unitario": 25, "pasajeros": [{ "pax_nombre": "Ana", "pax_documento": "123" }] } }
+    ]
+  },
+  "ReservationRef": {
+    "validos": [{ "res_uuid": "f47ac10b-58cc-4372-a567-0e02b2c3d479" }, { "res_codigo": "DEC-7F3K9Q" }],
+    "invalidos": [{ "descripcion": "ninguno de los dos", "datos": {} }, { "descripcion": "código con formato incorrecto", "datos": { "res_codigo": "ABC" } }, { "descripcion": "uuid inválido", "datos": { "res_uuid": "123" } }]
+  },
+  "CancelReservationRequest": {
+    "validos": [{ "res_codigo": "DEC-7F3K9Q", "res_motivo_cancelacion": "El cliente se arrepintió" }],
+    "invalidos": [{ "descripcion": "sin motivo", "datos": { "res_codigo": "DEC-7F3K9Q" } }, { "descripcion": "motivo demasiado corto", "datos": { "res_codigo": "DEC-7F3K9Q", "res_motivo_cancelacion": "x" } }]
+  },
+  "ListReservationsRequest": {
+    "validos": [{}, { "est_codigo": "CONFIRMADA", "det_id": 3, "page": 1, "limit": 20 }],
+    "invalidos": [{ "descripcion": "estado inexistente", "datos": { "est_codigo": "PAGADA" } }, { "descripcion": "page negativo", "datos": { "page": -1 } }]
+  }
+}

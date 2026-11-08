@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ms_pricing — JSON Schema de las peticiones (v1.0.0)",
+  "description": "Reglas de datos de cada petición gRPC. Los campos salen de la base ms_pricing del equipo. Se validan con AJV en ejecución y se prueban con npm run test:schemas.",
+  "$defs": {
+    "CreateTariffRequest": {
+      "type": "object", "additionalProperties": false, "required": ["atr_id", "tar_tipo", "tar_precio"],
+      "properties": {
+        "atr_id": { "type": "integer", "minimum": 1 },
+        "tar_tipo": { "type": "string", "enum": ["ADULTO", "NINO", "MAYOR", "GRUPO"] },
+        "tar_precio": { "type": "number", "minimum": 0, "maximum": 100000, "multipleOf": 0.01 },
+        "tar_moneda": { "type": "string", "pattern": "^[A-Z]{3}$", "default": "USD" },
+        "tar_vigente_desde": { "type": "string", "format": "date" }
+      }
+    },
+    "CloseTariffRequest": {
+      "type": "object", "additionalProperties": false, "required": ["tar_id", "tar_vigente_hasta"],
+      "properties": { "tar_id": { "type": "integer", "minimum": 1 }, "tar_vigente_hasta": { "type": "string", "format": "date" } }
+    },
+    "GetCurrentTariffsRequest": {
+      "type": "object", "additionalProperties": false, "required": ["atr_id"],
+      "properties": { "atr_id": { "type": "integer", "minimum": 1 }, "fecha": { "type": "string", "format": "date" } }
+    },
+    "ListTariffHistoryRequest": {
+      "type": "object", "additionalProperties": false, "required": ["atr_id"],
+      "properties": {
+        "atr_id": { "type": "integer", "minimum": 1 },
+        "tar_tipo": { "type": "string", "enum": ["ADULTO", "NINO", "MAYOR", "GRUPO"] },
+        "page": { "type": "integer", "minimum": 1 }, "limit": { "type": "integer", "minimum": 1, "maximum": 100 }
+      }
+    },
+    "CalculatePriceRequest": {
+      "type": "object", "additionalProperties": false, "required": ["atr_id"],
+      "properties": {
+        "atr_id": { "type": "integer", "minimum": 1 },
+        "fecha": { "type": "string", "format": "date" },
+        "adultos": { "type": "integer", "minimum": 0, "maximum": 500 },
+        "ninos": { "type": "integer", "minimum": 0, "maximum": 500 },
+        "mayores": { "type": "integer", "minimum": 0, "maximum": 500 }
+      }
+    }
+  }
+}

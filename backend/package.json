@@ -1,0 +1,60 @@
+{
+  "name": "atracciones-backend",
+  "version": "3.0.0",
+  "description": "Tienda individual de Atracciones Turísticas (ciudades con aeropuerto de Ecuador) integrada con Booking Prototipo — REST v3 + gRPC",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "start:dev": "tsc -p tsconfig.build.json --watch & node --watch dist/main.js",
+    "db:migrate": "node scripts/db.mjs migrate",
+    "db:seed": "node scripts/db.mjs seed",
+    "db:reset": "node scripts/db.mjs reset",
+    "mock:booking": "node scripts/booking-mock.mjs",
+    "test:e2e": "node scripts/e2e.mjs",
+    "check:contract": "node scripts/check-contract.mjs",
+    "test:ms": "node scripts/e2e-ms.mjs",
+    "test:bus": "node scripts/test-bus.mjs",
+    "smoke:bus": "node scripts/amqp-smoke.mjs",
+    "test:resiliencia": "node scripts/e2e-resiliencia.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.14.6",
+    "@grpc/proto-loader": "^0.8.1",
+    "@neondatabase/serverless": "^1.2.0",
+    "@nestjs/common": "^12.2.0",
+    "@nestjs/core": "^12.2.0",
+    "@nestjs/platform-express": "^12.2.0",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "amqplib": "^0.10.9",
+    "bcryptjs": "^3.0.3",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "dotenv": "^18.0.9",
+    "js-yaml": "^5.5.0",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "swagger-ui-express": "^5.0.1",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@onify/fake-amqplib": "^3.7.0",
+    "@types/amqplib": "^0.10.8",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/express": "^5.0.6",
+    "@types/js-yaml": "^4.0.9",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^26.6.5",
+    "@types/pg": "^8.23.1",
+    "@types/swagger-ui-express": "^4.1.8",
+    "@types/ws": "^8.18.2",
+    "typescript": "^7.0.2"
+  }
+}

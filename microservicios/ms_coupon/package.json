@@ -1,0 +1,14 @@
+{
+  "name": "ms_coupon",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Microservicio ms_coupon (REST) — Descubre EC / Atracciones. Base de datos propia.",
+  "scripts": {
+    "start": "node src/server.mjs",
+    "db:migrate": "node scripts/db.mjs migrate"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

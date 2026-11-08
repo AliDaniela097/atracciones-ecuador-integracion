@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ms_refund — esquemas de petición",
+  "version": "1.0.0",
+  "x-generado": "GENERADO desde src/definicion.mjs con contratos/exportar-esquemas.mjs (code-first). No editar a mano: cambie el código y vuelva a exportar.",
+  "$defs": {
+    "solicitud": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pag_id",
+        "monto"
+      ],
+      "properties": {
+        "pag_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "monto": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "multipleOf": 0.01
+        },
+        "motivo": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 300
+        }
+      }
+    },
+    "lista": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "pag_id": {
+          "type": "integer"
+        },
+        "procesado": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

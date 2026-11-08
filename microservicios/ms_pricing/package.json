@@ -1,0 +1,15 @@
+{
+  "name": "ms_pricing",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Microservicio ms_pricing (gRPC) — Descubre EC / Atracciones. Base de datos propia.",
+  "scripts": {
+    "start": "node src/server.mjs",
+    "db:migrate": "node scripts/db.mjs migrate",
+    "test:schemas": "node scripts/test-schemas.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

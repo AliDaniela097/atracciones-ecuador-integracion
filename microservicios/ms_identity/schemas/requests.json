@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ms_identity — esquemas de petición",
+  "version": "1.0.0",
+  "x-generado": "GENERADO desde src/definicion.mjs con contratos/exportar-esquemas.mjs (code-first). No editar a mano: cambie el código y vuelva a exportar.",
+  "$defs": {
+    "registro": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "correo",
+        "password",
+        "nombre",
+        "apellido"
+      ],
+      "properties": {
+        "correo": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 160
+        },
+        "password": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 72,
+          "pattern": "^(?=.*[A-Za-z])(?=.*[0-9]).+$"
+        },
+        "nombre": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "\\S"
+        },
+        "apellido": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "\\S"
+        },
+        "documento": {
+          "type": "string",
+          "pattern": "^([0-9]{10}|[A-Z]{1,2}[0-9]{6,9})$"
+        },
+        "telefono": {
+          "type": "string",
+          "pattern": "^\\+?[0-9]{7,15}$"
+        },
+        "fecha_nacimiento": {
+          "type": "string",
+          "format": "date"
+        }
+      }
+    },
+    "login": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "correo",
+        "password"
+      ],
+      "properties": {
+        "correo": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 160
+        },
+        "password": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        }
+      }
+    },
+    "token": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "token"
+      ],
+      "properties": {
+        "token": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 200
+        }
+      }
+    },
+    "olvido": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "correo"
+      ],
+      "properties": {
+        "correo": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 160
+        }
+      }
+    },
+    "reset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "token",
+        "password"
+      ],
+      "properties": {
+        "token": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 200
+        },
+        "password": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 72,
+          "pattern": "^(?=.*[A-Za-z])(?=.*[0-9]).+$"
+        }
+      }
+    },
+    "rol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rol"
+      ],
+      "properties": {
+        "rol": {
+          "type": "string",
+          "enum": [
+            "ADMIN",
+            "OPERADOR",
+            "CLIENTE"
+          ]
+        }
+      }
+    },
+    "lista": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "q": {
+          "type": "string",
+          "maxLength": 100
+        }
+      }
+    }
+  }
+}

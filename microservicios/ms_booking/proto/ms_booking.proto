@@ -1,0 +1,60 @@
+// CONTRATO gRPC de ms_booking (Booking Service) — Descubre EC / Atracciones
+// Base de datos propia: ms_booking (tablas estado, reserva, reserva_pasajero).
+// Nombres de campo = columnas de la base del equipo. Versión del contrato: 1.0.0 (SemVer).
+// Referencias a otros servicios por ID lógico: det_id -> orden_detalle (ms_order), dis_id -> disponibilidad (ms_inventory).
+// Reglas de datos adicionales (rangos, patrones, formatos) están en schemas/requests.json y se validan con AJV.
+syntax = "proto3";
+package ms_booking.v1;
+
+service BookingService {
+  rpc CreateReservation (CreateReservationRequest) returns (Reservation);      // nace en PENDIENTE_PAGO
+  rpc GetReservation (ReservationRef) returns (Reservation);
+  rpc ListReservations (ListReservationsRequest) returns (ListReservationsResponse);   // paginado
+  rpc ConfirmReservation (ReservationRef) returns (Reservation);               // PENDIENTE_PAGO -> CONFIRMADA
+  rpc CancelReservation (CancelReservationRequest) returns (Reservation);      // PENDIENTE_PAGO|CONFIRMADA -> CANCELADA
+  rpc CompleteReservation (ReservationRef) returns (Reservation);              // CONFIRMADA -> COMPLETADA (check-in / servicio prestado)
+}
+
+message PageMeta { int32 total_results = 1; int32 page = 2; int32 limit = 3; int32 total_pages = 4; }
+
+message PassengerInput {
+  string pax_nombre = 1;
+  string pax_documento = 2;             // cédula (10 dígitos) o pasaporte (1-2 letras + 6-9 dígitos), igual que dom_documento
+  string pax_fecha_nacimiento = 3;      // YYYY-MM-DD (opcional)
+  bool pax_es_titular = 4;              // exactamente un titular por reserva
+}
+message Passenger { int64 pax_id = 1; string pax_nombre = 2; string pax_documento = 3; string pax_fecha_nacimiento = 4; bool pax_es_titular = 5; }
+
+message CreateReservationRequest {
+  int64 det_id = 1;                     // ID lógico (ms_order.orden_detalle)
+  int64 dis_id = 2;                     // ID lógico (ms_inventory.disponibilidad)
+  int32 res_adultos = 3;
+  optional int32 res_ninos = 4;         // por defecto 0
+  optional double res_precio_unitario = 5;   // snapshot del precio; res_subtotal = precio * (adultos + niños)
+  string res_observaciones = 6;
+  repeated PassengerInput pasajeros = 7;
+}
+message Reservation {
+  int64 res_id = 1;
+  string res_uuid = 2;                  // id público
+  string res_codigo = 3;                // DEC-7F3K9Q
+  int64 det_id = 4;
+  int64 dis_id = 5;
+  string est_codigo = 6;                // PENDIENTE_PAGO | CONFIRMADA | CANCELADA | COMPLETADA
+  int32 res_adultos = 7;
+  int32 res_ninos = 8;
+  int32 res_numero_tickets = 9;
+  double res_precio_unitario = 10;
+  double res_subtotal = 11;
+  string res_observaciones = 12;
+  string res_motivo_cancelacion = 13;
+  string res_creado_en = 14;
+  string res_actualizado_en = 15;
+  string res_cancelado_en = 16;
+  string res_confirmado_en = 17;
+  repeated Passenger pasajeros = 18;
+}
+message ReservationRef { string res_uuid = 1; string res_codigo = 2; }         // uno de los dos
+message CancelReservationRequest { string res_uuid = 1; string res_codigo = 2; string res_motivo_cancelacion = 3; }
+message ListReservationsRequest { string est_codigo = 1; optional int64 det_id = 2; optional int64 dis_id = 3; int32 page = 4; int32 limit = 5; }
+message ListReservationsResponse { repeated Reservation data = 1; PageMeta metadata = 2; }

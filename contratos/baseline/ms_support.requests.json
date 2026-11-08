@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ms_support — esquemas de petición",
+  "version": "1.0.0",
+  "x-generado": "GENERADO desde src/definicion.mjs con contratos/exportar-esquemas.mjs (code-first). No editar a mano: cambie el código y vuelva a exportar.",
+  "$defs": {
+    "mensaje": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nombre",
+        "correo",
+        "asunto",
+        "cuerpo"
+      ],
+      "properties": {
+        "nombre": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "\\S"
+        },
+        "correo": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 160
+        },
+        "asunto": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30,
+          "pattern": "\\S"
+        },
+        "cuerpo": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 2000,
+          "pattern": "\\S"
+        }
+      }
+    },
+    "leido": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "leido"
+      ],
+      "properties": {
+        "leido": {
+          "type": "boolean"
+        }
+      }
+    },
+    "lista": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "leido": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

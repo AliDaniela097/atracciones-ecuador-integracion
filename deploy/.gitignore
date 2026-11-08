@@ -1,0 +1,4 @@
+stage/
+deploy.zip
+azure-settings.json
+publish_profile.xml

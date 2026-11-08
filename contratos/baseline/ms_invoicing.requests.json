@@ -1,0 +1,246 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ms_invoicing — esquemas de petición",
+  "version": "1.0.0",
+  "x-generado": "GENERADO desde src/definicion.mjs con contratos/exportar-esquemas.mjs (code-first). No editar a mano: cambie el código y vuelva a exportar.",
+  "$defs": {
+    "cliente": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tipo_identificacion",
+        "identificacion",
+        "razon_social",
+        "correo"
+      ],
+      "properties": {
+        "tipo_identificacion": {
+          "type": "string",
+          "enum": [
+            "CEDULA",
+            "RUC",
+            "PASAPORTE",
+            "CONSUMIDOR_FINAL"
+          ]
+        },
+        "identificacion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20
+        },
+        "razon_social": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 150,
+          "pattern": "\\S"
+        },
+        "correo": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 160
+        },
+        "telefono": {
+          "type": "string",
+          "pattern": "^\\+?[0-9]{7,15}$"
+        }
+      }
+    },
+    "EmitirFacturaRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ord_id",
+        "detalles"
+      ],
+      "properties": {
+        "ord_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "dfa_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cliente": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "tipo_identificacion",
+            "identificacion",
+            "razon_social",
+            "correo"
+          ],
+          "properties": {
+            "tipo_identificacion": {
+              "type": "string",
+              "enum": [
+                "CEDULA",
+                "RUC",
+                "PASAPORTE",
+                "CONSUMIDOR_FINAL"
+              ]
+            },
+            "identificacion": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20
+            },
+            "razon_social": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 150,
+              "pattern": "\\S"
+            },
+            "correo": {
+              "type": "string",
+              "format": "email",
+              "maxLength": 160
+            },
+            "telefono": {
+              "type": "string",
+              "pattern": "^\\+?[0-9]{7,15}$"
+            }
+          }
+        },
+        "detalles": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "detalle"
+          ],
+          "properties": {
+            "detalle": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 100,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "det_id",
+                  "codigo",
+                  "descripcion",
+                  "cantidad",
+                  "precio_unitario"
+                ],
+                "properties": {
+                  "det_id": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "codigo": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 25
+                  },
+                  "descripcion": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300,
+                    "pattern": "\\S"
+                  },
+                  "cantidad": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10000
+                  },
+                  "precio_unitario": {
+                    "type": "number",
+                    "minimum": 0,
+                    "multipleOf": 0.01
+                  },
+                  "descuento": {
+                    "type": "number",
+                    "minimum": 0,
+                    "multipleOf": 0.01
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "ConsultarFacturaRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "fac_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "ord_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "numero": {
+          "type": "string",
+          "pattern": "^[0-9]{3}-[0-9]{3}-[0-9]{9}$"
+        }
+      }
+    },
+    "ListarFacturasRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "estado": {
+          "type": "string",
+          "enum": [
+            "NO_PAGADA",
+            "PAGADA",
+            "ANULADA"
+          ]
+        },
+        "desde": {
+          "type": "string",
+          "format": "date"
+        },
+        "hasta": {
+          "type": "string",
+          "format": "date"
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      }
+    },
+    "MarcarFacturaPagadaRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fac_id"
+      ],
+      "properties": {
+        "fac_id": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "AnularFacturaRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fac_id"
+      ],
+      "properties": {
+        "fac_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "motivo": {
+          "type": "string",
+          "maxLength": 300
+        }
+      }
+    }
+  }
+}

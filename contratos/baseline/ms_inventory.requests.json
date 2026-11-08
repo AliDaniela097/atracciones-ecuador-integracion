@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ms_inventory — JSON Schema de las peticiones (v1.0.0)",
+  "description": "Reglas de datos de cada petición gRPC. Los campos salen de la base ms_inventory del equipo. Se validan con AJV en ejecución y se prueban con npm run test:schemas.",
+  "$defs": {
+    "Empty": { "type": "object", "additionalProperties": false },
+    "CreateHorarioRequest": {
+      "type": "object", "additionalProperties": false, "required": ["atr_id", "hor_hora"],
+      "properties": {
+        "atr_id": { "type": "integer", "minimum": 1 },
+        "hor_hora": { "type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$", "description": "Hora local HH:MM (24 h)" },
+        "hor_cupo": { "type": "integer", "minimum": 1, "maximum": 10000, "default": 20 }
+      }
+    },
+    "ListHorariosRequest": {
+      "type": "object", "additionalProperties": false, "required": ["atr_id"],
+      "properties": { "atr_id": { "type": "integer", "minimum": 1 }, "page": { "type": "integer", "minimum": 1 }, "limit": { "type": "integer", "minimum": 1, "maximum": 100 } }
+    },
+    "GenerateAvailabilityRequest": {
+      "type": "object", "additionalProperties": false, "required": ["atr_id", "fecha_desde", "fecha_hasta"],
+      "properties": { "atr_id": { "type": "integer", "minimum": 1 }, "fecha_desde": { "type": "string", "format": "date" }, "fecha_hasta": { "type": "string", "format": "date" } }
+    },
+    "ListAvailabilityRequest": {
+      "type": "object", "additionalProperties": false, "required": ["atr_id"],
+      "properties": {
+        "atr_id": { "type": "integer", "minimum": 1 },
+        "fecha_desde": { "type": "string", "format": "date" }, "fecha_hasta": { "type": "string", "format": "date" },
+        "solo_con_cupo": { "type": "boolean" },
+        "page": { "type": "integer", "minimum": 1 }, "limit": { "type": "integer", "minimum": 1, "maximum": 100 }
+      }
+    },
+    "GetAvailabilityRequest": { "type": "object", "additionalProperties": false, "required": ["dis_id"], "properties": { "dis_id": { "type": "integer", "minimum": 1 } } },
+    "SlotChangeRequest": {
+      "type": "object", "additionalProperties": false, "required": ["dis_id", "cantidad"],
+      "properties": { "dis_id": { "type": "integer", "minimum": 1 }, "cantidad": { "type": "integer", "minimum": 1, "maximum": 100 } }
+    },
+    "BlockDateRequest": {
+      "type": "object", "additionalProperties": false, "required": ["atr_id", "fb_fecha", "fb_motivo"],
+      "properties": { "atr_id": { "type": "integer", "minimum": 1 }, "fb_fecha": { "type": "string", "format": "date" }, "fb_motivo": { "type": "string", "minLength": 3, "maxLength": 200 } }
+    },
+    "SyncRequest": { "type": "object", "additionalProperties": false, "required": ["dis_id"], "properties": { "dis_id": { "type": "integer", "minimum": 1 } } }
+  }
+}

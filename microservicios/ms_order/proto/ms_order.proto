@@ -1,0 +1,61 @@
+// CONTRATO gRPC de ms_order (Order Management Service) — Descubre EC / Atracciones
+// Base de datos propia: ms_order (tablas estado, orden, orden_detalle, orden_cupon, idempotencia).
+// Nombres de campo = columnas de la base del equipo. Versión del contrato: 1.0.0 (SemVer).
+// Convención proto3: car_id y mpa_id = 0 significa "sin valor" (NULL en la base). ord_numero es el external_order_id del contrato de Booking.
+// Reglas de datos adicionales (rangos, patrones, formatos) están en schemas/requests.json y se validan con AJV.
+syntax = "proto3";
+package ms_order.v1;
+
+service OrderService {
+  rpc CreateOrder (CreateOrderRequest) returns (Order);                 // idempotente con idempotency_key (UUID)
+  rpc GetOrder (GetOrderRequest) returns (Order);
+  rpc ListOrders (ListOrdersRequest) returns (ListOrdersResponse);      // paginado
+  rpc UpdateOrderStatus (UpdateOrderStatusRequest) returns (Order);     // CREADA->PAGADA|CANCELADA · PAGADA->REEMBOLSADA
+}
+
+message PageMeta { int32 total_results = 1; int32 page = 2; int32 limit = 3; int32 total_pages = 4; }
+
+message OrderItemInput {
+  int64 atr_id = 1;                       // ID lógico (Catalog)
+  string det_descripcion = 2;             // snapshot del nombre de la atracción
+  int32 det_cantidad = 3;
+  optional double det_precio_unitario = 4; // snapshot del precio (Pricing); puede ser 0 (infantes)
+}
+message CreateOrderRequest {
+  int64 usu_id = 1;                       // ID lógico (Identity)
+  optional int64 car_id = 2;              // ID lógico (Cart); ausente = compra directa
+  optional int32 mpa_id = 3;              // ID lógico (Payment)
+  repeated OrderItemInput items = 4;
+  repeated int64 cup_ids = 5;             // ID lógico (Coupon)
+  optional double ord_descuento = 6;      // calculado por quien llama (Coupon/Pricing); por defecto 0
+  optional double ord_iva = 7;            // calculado por quien llama; por defecto 0
+  string ord_moneda = 8;                  // por defecto USD
+  string ord_observaciones = 9;
+  string idempotency_key = 10;            // UUID; la misma clave + mismo cuerpo devuelve la misma orden
+}
+message OrderDetail {
+  int64 det_id = 1; int64 atr_id = 2; string det_descripcion = 3; int32 det_cantidad = 4;
+  double det_precio_unitario = 5; double det_subtotal = 6;
+}
+message Order {
+  int64 ord_id = 1;
+  string ord_numero = 2;
+  int64 usu_id = 3;
+  int64 car_id = 4;                       // 0 = sin carrito
+  string est_codigo = 5;                  // CREADA | PAGADA | CANCELADA | REEMBOLSADA
+  int32 mpa_id = 6;                       // 0 = sin método de pago aún
+  string ord_fecha = 7;                   // ISO 8601
+  double ord_subtotal = 8;
+  double ord_descuento = 9;
+  double ord_iva = 10;
+  double ord_total = 11;                  // = subtotal - descuento + iva
+  string ord_moneda = 12;
+  string ord_observaciones = 13;
+  repeated OrderDetail detalles = 14;
+  repeated int64 cup_ids = 15;
+  bool idempotent_replay = 16;            // true si es la repetición de una petición idempotente
+}
+message GetOrderRequest { optional int64 ord_id = 1; string ord_numero = 2; }   // uno de los dos
+message ListOrdersRequest { optional int64 usu_id = 1; string est_codigo = 2; int32 page = 3; int32 limit = 4; }
+message ListOrdersResponse { repeated Order data = 1; PageMeta metadata = 2; }
+message UpdateOrderStatusRequest { int64 ord_id = 1; string est_codigo = 2; }

@@ -1,0 +1,55 @@
+// CONTRATO gRPC de ms_pricing (Pricing Service) — Descubre EC / Atracciones
+// Base de datos propia: ms_pricing (tabla tarifa, versionada por fecha de vigencia). Versión del contrato: 1.0.0 (SemVer).
+// Order (y Cart) consultan aquí el precio al crear la orden. Convención proto3: tar_vigente_hasta = "" significa "vigente (sin fin)".
+// Reglas de datos adicionales (rangos, patrones, formatos) están en schemas/requests.json y se validan con AJV.
+syntax = "proto3";
+package ms_pricing.v1;
+
+service PricingService {
+  rpc CreateTariff (CreateTariffRequest) returns (Tariff);                            // cierra la tarifa anterior del mismo tipo un día antes
+  rpc CloseTariff (CloseTariffRequest) returns (Tariff);                              // fija tar_vigente_hasta
+  rpc GetCurrentTariffs (GetCurrentTariffsRequest) returns (TariffList);              // tarifas vigentes en una fecha
+  rpc ListTariffHistory (ListTariffHistoryRequest) returns (ListTariffHistoryResponse); // historial paginado
+  rpc CalculatePrice (CalculatePriceRequest) returns (PriceQuote);                    // cotiza personas × tarifas
+}
+
+message PageMeta { int32 total_results = 1; int32 page = 2; int32 limit = 3; int32 total_pages = 4; }
+
+message Tariff {
+  int64 tar_id = 1;
+  int64 atr_id = 2;                        // ID lógico (Catalog)
+  string tar_tipo = 3;                     // ADULTO | NINO | MAYOR | GRUPO
+  double tar_precio = 4;
+  string tar_moneda = 5;                   // ISO 4217, por defecto USD
+  string tar_vigente_desde = 6;            // YYYY-MM-DD
+  string tar_vigente_hasta = 7;            // YYYY-MM-DD o "" (vigente)
+}
+message CreateTariffRequest {
+  int64 atr_id = 1;
+  string tar_tipo = 2;
+  double tar_precio = 3;
+  string tar_moneda = 4;                   // por defecto USD
+  string tar_vigente_desde = 5;            // por defecto hoy (Ecuador)
+}
+message CloseTariffRequest { int64 tar_id = 1; string tar_vigente_hasta = 2; }
+message GetCurrentTariffsRequest { int64 atr_id = 1; string fecha = 2; }             // fecha vacía = hoy
+message TariffList { repeated Tariff data = 1; }
+message ListTariffHistoryRequest { int64 atr_id = 1; string tar_tipo = 2; int32 page = 3; int32 limit = 4; }
+message ListTariffHistoryResponse { repeated Tariff data = 1; PageMeta metadata = 2; }
+
+message CalculatePriceRequest {
+  int64 atr_id = 1;
+  string fecha = 2;                        // fecha del servicio; vacía = hoy
+  int32 adultos = 3;
+  int32 ninos = 4;
+  int32 mayores = 5;
+}
+message PriceLine { string tar_tipo = 1; int32 cantidad = 2; double precio_unitario = 3; double subtotal = 4; }
+message PriceQuote {
+  int64 atr_id = 1;
+  string fecha = 2;
+  string moneda = 3;
+  int32 personas = 4;
+  repeated PriceLine lineas = 5;
+  double subtotal = 6;
+}

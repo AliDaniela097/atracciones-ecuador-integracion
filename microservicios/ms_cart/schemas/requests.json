@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ms_cart — esquemas de petición",
+  "version": "1.0.0",
+  "x-generado": "GENERADO desde src/definicion.mjs con contratos/exportar-esquemas.mjs (code-first). No editar a mano: cambie el código y vuelva a exportar.",
+  "$defs": {
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "atr_id"
+      ],
+      "properties": {
+        "atr_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "dis_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "adultos": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "ninos": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 50
+        }
+      }
+    },
+    "cambio": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "adultos": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "ninos": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 50
+        }
+      }
+    },
+    "consulta": {
+      "type": "object",
+      "properties": {
+        "precios": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

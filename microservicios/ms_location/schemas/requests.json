@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ms_location — esquemas de petición",
+  "version": "1.0.0",
+  "x-generado": "GENERADO desde src/definicion.mjs con contratos/exportar-esquemas.mjs (code-first). No editar a mano: cambie el código y vuelva a exportar.",
+  "$defs": {
+    "lista": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "reg_id": {
+          "type": "integer"
+        },
+        "prov_id": {
+          "type": "integer"
+        },
+        "q": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "activa": {
+          "type": "boolean"
+        }
+      }
+    },
+    "ciudad": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nombre",
+        "codigo",
+        "prov_id"
+      ],
+      "properties": {
+        "nombre": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "\\S"
+        },
+        "codigo": {
+          "type": "string",
+          "pattern": "^[0-9]{6}$"
+        },
+        "prov_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "descripcion": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "imagen": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "activa": {
+          "type": "boolean"
+        }
+      }
+    },
+    "ciudadCambio": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "nombre": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "\\S"
+        },
+        "descripcion": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "imagen": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "activa": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

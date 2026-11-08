@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ms_payment — esquemas de petición",
+  "version": "1.0.0",
+  "x-generado": "GENERADO desde src/definicion.mjs con contratos/exportar-esquemas.mjs (code-first). No editar a mano: cambie el código y vuelva a exportar.",
+  "$defs": {
+    "pago": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ord_id",
+        "metodo",
+        "monto"
+      ],
+      "properties": {
+        "ord_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "metodo": {
+          "type": "string",
+          "enum": [
+            "TARJETA",
+            "TRANSFERENCIA",
+            "EN_SITIO"
+          ]
+        },
+        "monto": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000000,
+          "multipleOf": 0.01
+        },
+        "tarjeta": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "numero",
+            "titular",
+            "mes",
+            "anio",
+            "cvv"
+          ],
+          "properties": {
+            "numero": {
+              "type": "string",
+              "pattern": "^[0-9]{13,19}$"
+            },
+            "titular": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 120,
+              "pattern": "\\S"
+            },
+            "mes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            },
+            "anio": {
+              "type": "integer",
+              "minimum": 2020,
+              "maximum": 2100
+            },
+            "cvv": {
+              "type": "string",
+              "pattern": "^[0-9]{3,4}$"
+            },
+            "pais": {
+              "type": "string",
+              "pattern": "^[A-Z]{2}$"
+            }
+          }
+        },
+        "transferencia": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "banco",
+            "numero_comprobante",
+            "fecha_transferencia"
+          ],
+          "properties": {
+            "banco": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 60,
+              "pattern": "\\S"
+            },
+            "numero_comprobante": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 40,
+              "pattern": "^[A-Za-z0-9-]+$"
+            },
+            "fecha_transferencia": {
+              "type": "string",
+              "format": "date"
+            },
+            "archivo_adjunto": {
+              "type": "string",
+              "maxLength": 500,
+              "pattern": "^https?://"
+            }
+          }
+        }
+      }
+    },
+    "rechazo": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "motivo": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 300
+        }
+      }
+    },
+    "lista": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "estado": {
+          "type": "string",
+          "enum": [
+            "PENDIENTE",
+            "APROBADO",
+            "RECHAZADO",
+            "FALLIDO"
+          ]
+        },
+        "ord_id": {
+          "type": "integer"
+        }
+      }
+    }
+  }
+}

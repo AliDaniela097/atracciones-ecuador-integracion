@@ -1,0 +1,14 @@
+{
+  "name": "ms_payment",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Microservicio ms_payment (REST) — Descubre EC / Atracciones. Base de datos propia.",
+  "scripts": {
+    "start": "node src/server.mjs",
+    "db:migrate": "node scripts/db.mjs migrate"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
