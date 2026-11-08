@@ -11,6 +11,7 @@ import Cupos from './pages/admin/Cupos.jsx';
 import Reservas from './pages/admin/Reservas.jsx';
 import EditarAtraccion from './pages/admin/EditarAtraccion.jsx';
 import Observabilidad from './pages/admin/Observabilidad.jsx';
+import Usuarios from './pages/admin/Usuarios.jsx';
 import { Marca } from './components/Arte.jsx';
 
 export function useSesion() {
@@ -42,7 +43,7 @@ export default function App() {
             {!s && <><NavLink to="/login">Ingresar</NavLink><NavLink to="/registro">Crear cuenta</NavLink></>}
             {esAdmin(s) && <>
               <NavLink to="/admin" end>Panel</NavLink><NavLink to="/admin/atracciones">Mis atracciones</NavLink>
-              <NavLink to="/admin/reservas">Reservas y check-in</NavLink><NavLink to="/admin/observabilidad">Observabilidad</NavLink>
+              <NavLink to="/admin/reservas">Reservas y check-in</NavLink><NavLink to="/admin/usuarios">Usuarios</NavLink><NavLink to="/admin/observabilidad">Observabilidad</NavLink>
             </>}
           </nav>
           <div className="barra-der">
@@ -64,6 +65,7 @@ export default function App() {
             <Route path="/admin/atracciones" element={<Protegida s={s}><AdminAtracciones /></Protegida>} />
             <Route path="/admin/atracciones/nueva" element={<Protegida s={s}><NuevaAtraccion /></Protegida>} />
             <Route path="/admin/atracciones/:id/editar" element={<Protegida s={s}><EditarAtraccion /></Protegida>} />
+            <Route path="/admin/usuarios" element={<Protegida s={s}><Usuarios /></Protegida>} />
             <Route path="/admin/observabilidad" element={<Protegida s={s}><Observabilidad /></Protegida>} />
             <Route path="/admin/atracciones/:id/cupos" element={<Protegida s={s}><Cupos /></Protegida>} />
             <Route path="/admin/reservas" element={<Protegida s={s}><Reservas /></Protegida>} />

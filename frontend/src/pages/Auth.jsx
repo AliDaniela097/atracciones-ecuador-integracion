@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, sesion } from '../api.js';
 import { Campo, Error_ } from '../components/ui.jsx';
 
-function entrar(r, nav, admin) { sesion.guardar({ token: r.access_token, user: r.user }); nav(admin && r.user.roles.includes('ADMIN') ? '/admin' : '/'); }
+function entrar(r, nav, admin) { sesion.guardar({ token: r.access_token, user: r.user }); nav(r.user.roles.includes('ADMIN') ? '/admin' : '/'); }
 
 export function Login() {
   const nav = useNavigate(); const [qs] = useSearchParams(); const admin = qs.get('admin') === '1';
