@@ -220,8 +220,8 @@ div.acc{display:flex;gap:8px;flex-wrap:wrap}
 }
 @media (max-width:820px){
   /* En celular la foto ocupa solo una franja arriba: así no se estira más allá de su tamaño real y no se pixela */
-  .hero-foto,.hero .panorama{bottom:auto;height:430px;object-position:50% 35%}
-  .hero::before{bottom:auto;height:430px;background:linear-gradient(180deg,rgba(7,43,52,.6) 0,rgba(7,43,52,.4) 45%,#0B3C45 100%)}
+  .hero-foto,.hero .panorama{bottom:auto;height:270px;object-position:50% 40%}
+  .hero::before{bottom:auto;height:270px;background:linear-gradient(180deg,rgba(7,43,52,.55) 0,rgba(7,43,52,.35) 40%,#0B3C45 100%)}
   :root{--alto-barra:128px}
   .barra{grid-template-columns:1fr auto;padding:16px 16px 0}
   .barra nav{grid-column:1/-1;grid-row:2;justify-self:stretch}
