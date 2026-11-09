@@ -1,0 +1,40 @@
+# Créditos de fotos
+
+Las fotos de las atracciones provienen de Wikimedia Commons y se usan según sus licencias libres. Cada autor conserva sus derechos.
+
+| Atracción | Archivo | Autor | Licencia |
+|---|---|---|---|
+| Mitad del Mundo y Museo Intiñan | [Mitad del Mundo, Quito, Ecuador, 2015-07-22, DD 07.JPG](https://commons.wikimedia.org/wiki/File:Mitad_del_Mundo,_Quito,_Ecuador,_2015-07-22,_DD_07.JPG) | Diego Delso | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) |
+| Basílica del Voto Nacional | [Basílica del Voto Nacional, Quito - 4.jpg](https://commons.wikimedia.org/wiki/File:Bas%C3%ADlica_del_Voto_Nacional,_Quito_-_4.jpg) | Maros M r a z (Maros) | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) |
+| Mirador del Panecillo y Virgen de Quito | [Virgen de Quito.jpg](https://commons.wikimedia.org/wiki/File:Virgen_de_Quito.jpg) | Lion Hirth (Prissantenbär) | Public domain |
+| Bosque nublado de Mindo | [Mindo-Cloud-Forest-05.jpg](https://commons.wikimedia.org/wiki/File:Mindo-Cloud-Forest-05.jpg) | Ayacop | Public domain |
+| Parque Seminario (Parque de las Iguanas) | [Parque Seminario Ecuador364.JPG](https://commons.wikimedia.org/wiki/File:Parque_Seminario_Ecuador364.JPG) | Arabsalam | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) |
+| Cerro Santa Ana y Barrio Las Peñas | [Guayas from Santa Ana.JPG](https://commons.wikimedia.org/wiki/File:Guayas_from_Santa_Ana.JPG) | Marc Figueras (Oersted) | Public domain |
+| Parque Histórico Guayaquil | [Parque Histórico Guayaquil - Edificios (1).JPG](https://commons.wikimedia.org/wiki/File:Parque_Hist%C3%B3rico_Guayaquil_-_Edificios_(1).JPG) | Freddy eduardo | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) |
+| Parque Calderón y Catedral de la Inmaculada | [Cuenca Ecuador Catedral Nueva 01.jpg](https://commons.wikimedia.org/wiki/File:Cuenca_Ecuador_Catedral_Nueva_01.jpg) | Cayambe | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) |
+| Museo Pumapungo y parque arqueológico | [Pumapungo.jpg](https://commons.wikimedia.org/wiki/File:Pumapungo.jpg) | Micah MacAllen | [CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0) |
+| Mirador de Turi | [Cuenca desde el mirador de Turi.jpg](https://commons.wikimedia.org/wiki/File:Cuenca_desde_el_mirador_de_Turi.jpg) | Natalia Cartolini | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) |
+| Complejo Arqueológico de Ingapirca | [Ingapirca Temple of the sun.jpg](https://commons.wikimedia.org/wiki/File:Ingapirca_Temple_of_the_sun.jpg) | Cayambe | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) |
+| Playa Murciélago | [Manta Ec playa Murciélago.jpg](https://commons.wikimedia.org/wiki/File:Manta_Ec_playa_Murci%C3%A9lago.jpg) | Cayambe | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) |
+| Montecristi y sombreros de paja toquilla | [Montecristi panorama.JPG](https://commons.wikimedia.org/wiki/File:Montecristi_panorama.JPG) | Sylvain2803 | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) |
+| Isla de la Plata, Parque Nacional Machalilla | [Isladelaplata.JPG](https://commons.wikimedia.org/wiki/File:Isladelaplata.JPG) | Francesco Bailo | Public domain |
+| Parque Nacional Cotopaxi | [Cotopaxi National Park.jpg](https://commons.wikimedia.org/wiki/File:Cotopaxi_National_Park.jpg) | Eman Jaradat | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) |
+| Laguna del Quilotoa | [Laguna Quilotoa, Ecuador.jpg](https://commons.wikimedia.org/wiki/File:Laguna_Quilotoa,_Ecuador.jpg) | TupakAmaruIshkay | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) |
+| Playa de Atacames | [Atacames Beach, Ecuador -1- (361306423).jpg](https://commons.wikimedia.org/wiki/File:Atacames_Beach,_Ecuador_-1-_(361306423).jpg) | Davidlohr Bueso from Valparaiso, Chile | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) |
+| Playa de Same | [Ecuador - Same - Esmeraldas - 009.JPG](https://commons.wikimedia.org/wiki/File:Ecuador_-_Same_-_Esmeraldas_-_009.JPG) | No machine-readable author provided. Martini assumed (based on copyright claims). | [CC BY-SA 2.5](https://creativecommons.org/licenses/by-sa/2.5) |
+| Mompiche y su rompiente | [Mangroves near Mompiche - Ecuador.jpg](https://commons.wikimedia.org/wiki/File:Mangroves_near_Mompiche_-_Ecuador.jpg) | Terpsichores | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) |
+| Reserva de Producción de Fauna Cuyabeno | [Cuyabeno Wild Life Reserve banner.jpg](https://commons.wikimedia.org/wiki/File:Cuyabeno_Wild_Life_Reserve_banner.jpg) | M Blissett | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) |
+| Cascada de San Rafael | [AMA Cascada de San Rafael limite provincial de Napo y Sucumbíos (8227381138).jpg](https://commons.wikimedia.org/wiki/File:AMA_Cascada_de_San_Rafael_limite_provincial_de_Napo_y_Sucumb%C3%ADos_(8227381138).jpg) | amalavida.tv | [CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0) |
+| Parque Nacional Sangay (lagunas de Atillo) | [Ama la Vida - Flickr - ANDES Laguna de Atillo Parque Nacional Sangay (8226339107).jpg](https://commons.wikimedia.org/wiki/File:Ama_la_Vida_-_Flickr_-_ANDES_Laguna_de_Atillo_Parque_Nacional_Sangay_(8226339107).jpg) | amalavida.tv from Ecuador | [CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0) |
+| Parque Amazónico La Isla | [Amazon Rainforest in Tena, Ecuador.jpg](https://commons.wikimedia.org/wiki/File:Amazon_Rainforest_in_Tena,_Ecuador.jpg) | Jay | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) |
+| Rafting en el río Jatunyacu | [Río Napo, Selina Amazon Lodge - Tena.jpg](https://commons.wikimedia.org/wiki/File:R%C3%ADo_Napo,_Selina_Amazon_Lodge_-_Tena.jpg) | David C. S. | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) |
+| Cavernas de Jumandy | [CAVERNAS DE JUMANDY (19964246522).jpg](https://commons.wikimedia.org/wiki/File:CAVERNAS_DE_JUMANDY_(19964246522).jpg) | Agencia de Noticias ANDES | [CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0) |
+| Crucero por el río Napo | [Gabarra en el rio Napo Ecuador.jpg](https://commons.wikimedia.org/wiki/File:Gabarra_en_el_rio_Napo_Ecuador.jpg) | Luisalbertoguerreromaldonado | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) |
+| Parque Nacional Yasuní | [Scarlet macaw (Ara macao macao) in flight Yasuni.jpg](https://commons.wikimedia.org/wiki/File:Scarlet_macaw_(Ara_macao_macao)_in_flight_Yasuni.jpg) | Charles J. Sharp | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) |
+| Parque Nacional Podocarpus | [Parque Nacional Podocarpus banner.jpg](https://commons.wikimedia.org/wiki/File:Parque_Nacional_Podocarpus_banner.jpg) | Arabsalam | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) |
+| Puerta de la Ciudad y centro histórico | [LojaCityGates.JPG](https://commons.wikimedia.org/wiki/File:LojaCityGates.JPG) | The lifted lorax at English Wikipedia | Public domain |
+| Valle de Vilcabamba | [VilcabambaEcuador.JPG](https://commons.wikimedia.org/wiki/File:VilcabambaEcuador.JPG) | The lifted lorax at English Wikipedia | Public domain |
+| Isla Seymour Norte | [Isla Seymour Norte, islas Galápagos, Ecuador, 2015-07-23, DD 02-03 PAN.JPG](https://commons.wikimedia.org/wiki/File:Isla_Seymour_Norte,_islas_Gal%C3%A1pagos,_Ecuador,_2015-07-23,_DD_02-03_PAN.JPG) | Diego Delso | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) |
+| Isla Bartolomé | [Bartolomé Island Pinnacle Rock.jpg](https://commons.wikimedia.org/wiki/File:Bartolom%C3%A9_Island_Pinnacle_Rock.jpg) | Cayambe | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) |
+| Kicker Rock (León Dormido) | [León Dormido (Kicker Rock).JPG](https://commons.wikimedia.org/wiki/File:Le%C3%B3n_Dormido_(Kicker_Rock).JPG) | Xxchangwoo0120xx | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) |
+| Playa Lobería | [Galápagos sea lion San Cristóbal Galápagos Ecuador DSC00189 ad.JPG](https://commons.wikimedia.org/wiki/File:Gal%C3%A1pagos_sea_lion_San_Crist%C3%B3bal_Gal%C3%A1pagos_Ecuador_DSC00189_ad.JPG) | Adavyd | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) |
