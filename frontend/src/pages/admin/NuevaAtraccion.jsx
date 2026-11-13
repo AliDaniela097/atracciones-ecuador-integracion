@@ -24,6 +24,7 @@ export default function NuevaAtraccion() {
       const a = await api('POST', '/admin/atracciones', { body: {
         nombre: f.nombre.trim(), descripcion: f.descripcion.trim(), tipo: f.tipo, ciudad_id: Number(f.ciudad_id), operador_id: Number(f.operador_id),
         latitud: Number(f.latitud), longitud: Number(f.longitud), duracion_horas: Number(f.duracion_horas),
+        cancelacion_gratuita: true, horas_cancelacion: 24,   // regla oficial del RDA2: se puede cancelar hasta 24 h antes del turno
         ...(f.punto_encuentro && { punto_encuentro: f.punto_encuentro }), ...(f.foto && { fotos: [{ url: f.foto, alt: f.nombre }] }) } });
       setPaso('Guardando tarifas…');
       await api('PUT', `/admin/atracciones/${a.id}`, { body: { tarifas: { ADULTO: Number(f.adulto), ...(f.nino !== '' && { NINO: Number(f.nino) }) } } });

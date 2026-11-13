@@ -60,6 +60,7 @@ export class AdminController {
 
   @Get('reservas') reservas(@Query() q: any) { return this.r.listar(q); }
   @Get('usuarios') usuarios(@Query() q: any) { return this.a.listUsuarios(q); }
+  @Get('clientes') clientes(@Query() q: any) { return this.a.listClientes(q); }
   @Patch('usuarios/:id') patchUsuario(@Param('id', ParseIntPipe) id: number, @Body() b: any, @Req() req: R) { return this.a.patchUsuario(id, b, req.principal?.id); }
 
   // Sincronización gRPC con Booking

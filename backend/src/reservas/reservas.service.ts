@@ -182,7 +182,7 @@ export class ReservasService implements OnModuleInit {
     const r = await this.db.one(
       `SELECT r.*, e.est_codigo, c.cli_nombre, c.cli_correo, c.cli_telefono, c.cli_tipo_documento, c.cli_documento,
               t.tur_fecha, h.hor_hora, a.atr_codigo, a.atr_nombre, a.atr_punto_encuentro, a.atr_direccion, ci.ciu_nombre,
-              g.gui_nombre, g.gui_licencia, rm.rem_numero, rm.rem_monto
+              g.gui_nombre, g.gui_licencia, rm.rem_numero, rm.rem_monto, a.atr_cancelacion_gratuita, a.atr_horas_cancelacion
          FROM reserva r JOIN estado_reserva e ON e.est_id=r.est_id JOIN cliente c ON c.cli_id=r.cli_id
          JOIN turno t ON t.tur_id=r.tur_id JOIN horario h ON h.hor_id=t.hor_id JOIN atraccion a ON a.atr_id=h.atr_id JOIN ciudad ci ON ci.ciu_id=a.ciu_id
          LEFT JOIN guia g ON g.gui_id=r.gui_id LEFT JOIN reembolso rm ON rm.res_id=r.res_id
@@ -208,6 +208,9 @@ export class ReservasService implements OnModuleInit {
       attraction_id: r.atr_codigo, attraction_name: r.atr_nombre,
       _links: { self: base, checkin: `${base}/checkin`, cancel: `${base}/cancel` },
     };
+    // Política de cancelación vigente para esta reserva: la web la usa para mostrar u ocultar el botón sin repetir la regla.
+    const inicio = new Date(`${r.tur_fecha}T${hhmmFromDb(r.hor_hora)}:00-05:00`).getTime();
+    out.cancellation_policy = { free_cancellation: !!r.atr_cancelacion_gratuita, deadline_hours: r.atr_horas_cancelacion, cancellable_until: new Date(inicio - r.atr_horas_cancelacion * 3600_000).toISOString() };
     if (r.rem_numero) { out.reembolso_id = r.rem_numero; out.monto_reembolsado = r.rem_monto; }
     if (r.est_codigo === 'CANCELLED') delete out._links.cancel, delete out._links.checkin;
     return out;
@@ -242,6 +245,9 @@ export class ReservasService implements OnModuleInit {
     // Un solicitante que dice ser ADMIN/SAGA debe tener el rol correspondiente.
     const privileged = p?.roles.some((r) => ['ADMIN', 'PARTNER', 'OPERADOR'].includes(r)) ?? false;
     if (solicitante !== 'CLIENTE' && !privileged) throw forbidden(`El solicitante ${solicitante} requiere rol ADMIN o credenciales de socio.`);
+    // Las cancelaciones que llegan de Booking (credencial de socio) solo se bloquean por check-in: Booking ya valida su propio plazo
+    // y una compensación Saga nunca debe ser rechazada. El plazo y la cancelación gratuita aplican al turista de la web.
+    const esSocio = p?.type === 'api-key' || (p?.roles.includes('PARTNER') ?? false);
 
     await this.db.tx(async (c) => {
       const r = (await c.query(
@@ -249,13 +255,15 @@ export class ReservasService implements OnModuleInit {
            FROM reserva r JOIN estado_reserva e ON e.est_id=r.est_id JOIN turno t ON t.tur_id=r.tur_id JOIN horario h ON h.hor_id=t.hor_id JOIN atraccion a ON a.atr_id=h.atr_id
           WHERE r.res_id=$1 FOR UPDATE OF r`, [resId])).rows[0];
       if (r.est_codigo === 'CANCELLED') return; // idempotente: ya estaba cancelada
-      if (['CHECKED_IN', 'COMPLETED', 'EXPIRED'].includes(r.est_codigo))
-        throw conflict(`La reserva está en estado ${r.est_codigo} y no puede cancelarse.`, 'RESERVATION_NOT_CANCELLABLE');
-      if (solicitante === 'CLIENTE') {
-        if (!r.atr_cancelacion_gratuita) throw conflict('Esta atracción no admite cancelación gratuita.', 'CANCELLATION_NOT_ALLOWED');
+      if (['CHECKED_IN', 'COMPLETED'].includes(r.est_codigo))
+        throw conflict('No se puede cancelar una reserva que ya realizó check-in o fue asistida.', 'RESERVATION_NOT_CANCELLABLE', 'Cancelación No Permitida');
+      if (r.est_codigo === 'EXPIRED')
+        throw conflict('La reserva está vencida y no puede cancelarse.', 'RESERVATION_NOT_CANCELLABLE', 'Cancelación No Permitida');
+      if (solicitante === 'CLIENTE' && !esSocio) {
+        if (!r.atr_cancelacion_gratuita) throw conflict('Esta atracción no admite cancelación gratuita.', 'CANCELLATION_NOT_ALLOWED', 'Cancelación No Permitida');
         const start = new Date(`${r.tur_fecha}T${hhmmFromDb(r.hor_hora)}:00-05:00`).getTime();
         if (Date.now() > start - r.atr_horas_cancelacion * 3600_000)
-          throw conflict(`El plazo de cancelación gratuita (${r.atr_horas_cancelacion} h antes) ya venció.`, 'CANCELLATION_WINDOW_EXPIRED');
+          throw conflict(`La cancelación y reembolso solo están permitidos con al menos ${r.atr_horas_cancelacion} horas de anticipación al horario reservado.`, 'CANCELLATION_WINDOW_EXPIRED', 'Cancelación Fuera de Plazo');
       }
       const seats = Number((await c.query('SELECT COALESCE(SUM(bol_cantidad),0) AS n FROM reserva_boleto WHERE res_id=$1', [resId])).rows[0].n);
       const total = Number((await c.query('SELECT COALESCE(SUM(bol_cantidad*bol_precio_unit),0) AS n FROM reserva_boleto WHERE res_id=$1', [resId])).rows[0].n);
@@ -270,7 +278,19 @@ export class ReservasService implements OnModuleInit {
       const ref = (await this.db.one('SELECT res_ms_ref FROM reserva WHERE res_id=$1', [resId]))?.res_ms_ref as MsRefs | null;
       if (ref && !(ref as any).degradado) await this.ms.deshacer(ref, reason ?? 'Cancelada por el cliente');   // una reserva degradada nunca pasó por los microservicios
     }
-    return this.dto(resId);
+    return this.conCancelacion(await this.dto(resId));
+  }
+
+  /** Respuesta canónica de una cancelación: además de reembolso_id y monto_reembolsado (campos del contrato), cancel_code, refund y stock_restoration. */
+  private conCancelacion(d: any) {
+    if (d.status !== 'CANCELLED') return d;
+    const monto = Number(d.monto_reembolsado ?? 0);
+    return {
+      ...d, cancel_code: d.reembolso_id,
+      refund: { refund_id: d.reembolso_id, status: 'PROCESSED', amount: monto, currency: 'USD', message: 'Reembolso simulado del 100% procesado.' },
+      stock_restoration: { status: 'RESTORED', restored_spots: d.ticket_count, message: 'Cupos reincorporados a la disponibilidad del operador local.' },
+      message: 'Reserva cancelada exitosamente y cupos restituidos.',
+    };
   }
 
   /** Trazabilidad: ids que tuvo la reserva en ms_inventory, ms_order y ms_booking. */

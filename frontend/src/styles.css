@@ -1,15 +1,15 @@
-/* Atracciones Ecuador · tema "océano y menta": verde azulado profundo, menta y cristal.
+/* Atracciones Ecuador · tema claro: fondo blanco, azul cielo y aguamarina encendidos, sobre la foto del Ecuador.
    Tipografías incluidas en el proyecto (licencia SIL OFL): Fraunces (títulos) y Manrope (texto). */
 @font-face{font-family:'Fraunces';src:url('./assets/fonts/fraunces.woff2') format('woff2-variations'),url('./assets/fonts/fraunces.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
 @font-face{font-family:'Manrope';src:url('./assets/fonts/manrope.woff2') format('woff2-variations'),url('./assets/fonts/manrope.woff2') format('woff2');font-weight:200 800;font-style:normal;font-display:swap}
 
 
 :root{
-  --tinta:#EAF6F4;--noche:#FFFFFF;--uva:#D5F3EC;--ciruela:#5FE3C0;--violeta-2:#86EFD3;--menta:#5FE3C0;--sol:#F2B544;--cielo:#8FC3DE;
-  --fondo:#0B3C45;--suave:#A8C9C5;--papel:rgba(255,255,255,.07);--papel-2:rgba(255,255,255,.1);--borde:rgba(255,255,255,.14);--borde-fuerte:rgba(255,255,255,.3);
-  --ok:#7BE8B4;--aviso:#F2C264;--err:#FF9C94;--sombra:0 30px 60px -30px rgba(0,0,0,.5);--tinta-boton:#06363A;
+  --tinta:#16324a;--noche:#0b2a42;--uva:#d5ecf8;--ciruela:#38bdf8;--violeta-2:#7dd3fc;--menta:#38bdf8;--sol:#f59e0b;--cielo:#0ea5e9;--acento:#0369a1;
+  --fondo:#ffffff;--suave:#4a6378;--papel:#ffffff;--papel-2:#f1f8fd;--borde:rgba(11,42,66,.13);--borde-fuerte:rgba(11,42,66,.26);
+  --ok:#0b7a4b;--aviso:#92580a;--err:#b42318;--sombra:0 24px 50px -28px rgba(7,60,100,.4);--tinta-boton:#06283d;
   --titulos:'Fraunces',Georgia,'Times New Roman',serif;--texto:'Manrope',system-ui,'Segoe UI',sans-serif;
-  --alto-barra:88px;color-scheme:dark;
+  --alto-barra:88px;color-scheme:light;
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -95,6 +95,9 @@ select.sel-rol{width:auto;min-width:150px;padding:8px 12px;border-radius:99px}
 .filtros:has(.campo){border-radius:28px;padding:12px 16px;gap:12px 16px;align-items:end}
 .filtros .campo{flex:0 1 200px}
 .filtros .campo input{border:1px solid var(--borde-fuerte);background:var(--papel-2);padding:10px 14px}
+.filtros .campo select{border:1px solid var(--borde-fuerte);background-color:var(--papel-2);padding:10px 14px;border-radius:99px;width:100%}
+.filtros .campo:has(select){flex-basis:230px}
+.filtros .campo:has(input[type=search]){flex-basis:230px}
 .filtros .chk{white-space:nowrap;padding:0 8px}
 .rejilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:26px}
 .tarjeta{position:relative;display:flex;flex-direction:column;border-radius:26px;background:var(--papel);border:1px solid var(--borde);overflow:hidden;backdrop-filter:blur(10px);box-shadow:0 24px 44px -30px rgba(0,0,0,.6);transition:transform .35s cubic-bezier(.2,.7,.2,1),border-color .3s,box-shadow .3s}
@@ -245,3 +248,253 @@ div.acc{display:flex;gap:8px;flex-wrap:wrap}
   html{scroll-behavior:auto}
   *,*::before,*::after{animation:none!important;transition:none!important}
 }
+
+
+.pestanas{display:flex;gap:6px;margin:18px 0 22px;padding:6px;border-radius:99px;background:var(--papel);border:1px solid var(--borde);width:fit-content;max-width:100%;overflow-x:auto}
+.pestanas button{border:0;background:transparent;color:var(--tinta);padding:10px 22px;border-radius:99px;font-weight:600;white-space:nowrap;box-shadow:none}
+.pestanas button.activa{background:var(--menta);color:var(--tinta-boton)}
+
+
+/* ---------- Responsivo completo ---------- */
+html,body{max-width:100%;overflow-x:hidden}
+img,video,svg,canvas{max-width:100%}
+input,select,textarea{max-width:100%;min-width:0}
+main,.contenedor,.hero,.reserva,.filtros,form{min-width:0}
+@media (max-width:820px){
+  /* Menú: todos los enlaces visibles, en varias filas si hace falta (sin cortarse) */
+  .barra nav{flex-wrap:wrap;justify-content:center;border-radius:24px;overflow:visible;gap:4px}
+  .barra nav a{padding:8px 14px;flex:0 1 auto}
+  .barra{min-height:0}
+}
+@media (max-width:1040px){
+  :root{--alto-barra:170px}
+  .scroll{overflow:visible;border-radius:0}
+  table,thead,tbody,tr,td{display:block;width:100%}
+  table{background:none;border:0;border-radius:0}
+  thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  tbody tr{margin:0 0 14px;background:var(--papel);border:1px solid var(--borde);border-radius:18px;overflow:hidden}
+  tbody tr:hover{background:var(--papel)}
+  td,td.nw,td:first-child,td.nom{display:flex;justify-content:space-between;align-items:center;gap:14px;min-width:0;white-space:normal;text-align:right;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
+  td::before{content:attr(data-label);flex:0 0 38%;max-width:42%;text-align:left;font-size:.74rem;font-weight:700;letter-spacing:.03em;color:var(--suave);text-transform:uppercase}
+  td[data-label='']::before{display:none}
+  td[data-label=''],td[colspan]{justify-content:center;text-align:center}
+  td.acc{display:flex;flex-wrap:wrap;justify-content:flex-end;min-width:0}
+  td.acc>*{margin:3px 0 3px 8px}
+  tbody tr:last-child td,tbody tr td:last-child{border-bottom:0}
+  .pestanas{width:100%}
+  .pestanas button{flex:1}
+}
+@media (max-width:420px){
+  .barra nav a{padding:7px 11px;font-size:.84rem}
+  .marca{font-size:1.05rem}
+  h1{overflow-wrap:anywhere}
+}
+
+
+/* ---------- Stock en vivo ---------- */
+.alerta.espera{color:#ffe7b5;border-color:rgba(242,194,100,.55);background:rgba(120,80,10,.3)}
+.stock-card{margin:0 0 22px;padding:22px;border-radius:26px;background:var(--papel);border:1px solid var(--borde);backdrop-filter:blur(10px);box-shadow:0 20px 40px -30px rgba(0,0,0,.6)}
+.stock-cab{display:flex;gap:16px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
+.stock-cab h2{margin:0 0 4px;font-size:1.35rem}
+.stock-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}
+.stock-kpi{border-radius:18px;padding:14px 16px;display:grid;gap:2px;background:rgba(255,255,255,.06);border:1px solid var(--borde);transition:background .3s,border-color .3s}
+.stock-kpi span{color:var(--suave);font-size:.8rem;font-weight:600}
+.stock-kpi strong{font-family:var(--titulos);font-size:1.9rem;font-weight:420;line-height:1.1;color:var(--menta)}
+.stock-card .scroll table{margin-top:4px}
+td small.invalido,.stock-card small.invalido{color:var(--err);flex-basis:100%}
+@keyframes destello-baja{0%,70%{background:rgba(242,181,68,.38);box-shadow:inset 0 0 0 1px var(--sol)}100%{background:transparent;box-shadow:none}}
+@keyframes destello-sube{0%,70%{background:rgba(95,227,192,.34);box-shadow:inset 0 0 0 1px var(--menta)}100%{background:transparent;box-shadow:none}}
+.destello-baja{animation:destello-baja 2.6s ease-out}
+.destello-sube{animation:destello-sube 2.6s ease-out}
+.stock-kpi.destello-baja,.stock-kpi.destello-sube{animation-duration:2.6s}
+@media (max-width:720px){
+  .stock-card{padding:16px;border-radius:22px}
+  .stock-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stock-cab button{width:100%}
+  td.acc small.invalido{text-align:right}
+}
+
+/* Cancelación de reservas (turista) y "Mis reservas" */
+.reserva-card{background:var(--papel);border:1px solid var(--borde);border-radius:22px;padding:18px 20px;margin:0 0 14px;display:grid;gap:10px}
+.reserva-card h2{margin:0;font-size:1.3rem}
+.reserva-card .datos{display:flex;flex-wrap:wrap;gap:6px 20px}
+.cancel-bloque{display:grid;gap:10px;justify-items:start;margin:8px 0}
+.cancel-nota{margin:8px 0;padding:10px 14px;border-radius:14px;border:1px solid var(--borde-fuerte);background:rgba(255,255,255,.06);font-size:.92rem;color:inherit}
+.cancel-nota.aviso{color:#ffe7b5;border-color:rgba(242,194,100,.55);background:rgba(120,80,10,.3)}
+.exito-badge{display:inline-flex;align-items:center;gap:8px;padding:5px 14px;border-radius:99px;background:rgba(20,101,58,.5);color:#b9f5d8;border:1px solid rgba(123,232,180,.55);font-weight:700;font-size:.85rem}
+.exito-lista{list-style:none;margin:14px 0;padding:0;display:grid;gap:8px}
+.exito-lista li{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:10px 14px;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid var(--borde)}
+.peligro-solido{background:#c0392b;border-color:#c0392b;color:#fff}
+.peligro-solido:hover:not(:disabled){background:#d44a3b}
+.sec.peligro{color:#ffb3ad;border-color:rgba(255,156,148,.6)}
+.sec.peligro:hover:not(:disabled){background:rgba(163,32,26,.3)}
+
+/* Sondeo silencioso: indicador "en vivo", cambio suave de estado y badge rojo de reserva cancelada */
+.ins{transition:background-color .4s ease,color .4s ease}
+.ins-cancelled{background:#b91c1c;color:#fff}
+@keyframes aparecer{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+.reserva-card .ins,.reserva-card .cancel-nota{animation:aparecer .45s ease-out}
+.fila-vivo{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.en-vivo{display:inline-flex;align-items:center;gap:7px;margin:0;color:var(--suave);font-size:.85rem}
+.en-vivo i{width:8px;height:8px;border-radius:50%;background:var(--menta);animation:latido 2s ease-in-out infinite}
+@keyframes latido{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.reserva-card .ins,.reserva-card .cancel-nota,.en-vivo i{animation:none}}
+
+
+/* =====================================================================
+   TEMA CLARO: fondo blanco y colores encendidos. Va al final para reemplazar los estilos oscuros anteriores.
+   ===================================================================== */
+body{background:linear-gradient(160deg,#bfe9fb 0,#cdf5ec 100%) fixed;color:var(--tinta)}
+a{color:var(--acento)}a:hover{color:var(--noche)}
+:focus-visible{outline-color:var(--cielo)}
+.marco{background:radial-gradient(900px 480px at 100% 0,rgba(56,189,248,.13),transparent 70%),radial-gradient(700px 480px at 0 38%,rgba(45,212,191,.10),transparent 70%),#fff;box-shadow:0 34px 80px -40px rgba(7,60,100,.5),0 0 0 1px rgba(255,255,255,.7)}
+
+/* Barra: píldora blanca que se lee igual sobre la foto y sobre el fondo blanco */
+.marca,.marca:hover{color:var(--noche)}
+.marca-svg{color:var(--cielo)}
+.barra nav{background:#fff;border:1px solid var(--borde);box-shadow:0 12px 30px -18px rgba(7,60,100,.45);backdrop-filter:none;-webkit-backdrop-filter:none}
+.barra nav a{color:var(--tinta)}
+.barra nav a:hover{background:#e6f6fe;color:var(--noche)}
+.barra nav a.active{background:var(--menta);color:var(--tinta-boton)}
+.usuario{color:var(--tinta);font-weight:600}
+.rol{display:inline-flex;align-items:center;padding:4px 12px;border-radius:99px;background:#e0f4ff;color:#075985;border:1px solid #b6e3fb;font-size:.78rem;font-weight:800;letter-spacing:.02em;white-space:nowrap}
+.barra.fija::before{background:linear-gradient(180deg,#fff 0,rgba(255,255,255,.95) 72%,transparent 100%)}
+.barra.sobre-foto:not(.fija) .marca,.barra.sobre-foto:not(.fija) .usuario{color:#fff;text-shadow:0 1px 12px rgba(5,40,61,.6)}
+.barra.sobre-foto:not(.fija) .marca-svg{color:#fff}
+.barra.sobre-foto:not(.fija) nav{background:rgba(255,255,255,.94)}
+.barra.sobre-foto:not(.fija) .barra-der button.sec{background:rgba(255,255,255,.16);color:#fff;border-color:rgba(255,255,255,.75)}
+.barra.sobre-foto:not(.fija) .barra-der button.sec:hover{background:rgba(255,255,255,.3);color:#fff}
+/* Administrador: logotipo y usuario arriba, menú completo debajo (nada se corta) */
+.barra,.barra.admin{grid-template-columns:auto minmax(0,1fr) auto}
+.barra.admin{position:relative;top:0;grid-template-columns:minmax(0,1fr) auto;padding-bottom:6px}
+.barra.admin nav{grid-column:1/-1;grid-row:2;justify-self:center;flex-wrap:wrap;justify-content:center;border-radius:26px;max-width:100%;overflow:visible}
+.barra.admin .barra-der{grid-column:2;grid-row:1}
+
+/* Botones */
+button:hover:not(:disabled),.boton:hover{background:var(--violeta-2);color:var(--tinta-boton);box-shadow:0 14px 28px -14px rgba(14,165,233,.75)}
+button.sec,.boton.sec{background:#fff;color:var(--noche);border-color:var(--borde-fuerte)}
+button.sec:hover:not(:disabled),.boton.sec:hover{background:#e6f6fe;border-color:var(--cielo);color:var(--noche);box-shadow:none}
+button.claro,.boton.claro{background:#e6f6fe;color:var(--noche);border-color:#b6e3fb}
+button.claro:hover,.boton.claro:hover{background:#d3effd;color:var(--noche)}
+button.enlace{color:var(--acento)}
+button.enlace:hover:not(:disabled){background:none;color:var(--noche)}
+.hero button.sec,.hero button.enlace,.hero .boton.sec{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.7)}
+.hero button.enlace{background:none;border:0}
+.hero button.sec:hover:not(:disabled),.hero button.enlace:hover:not(:disabled){background:rgba(255,255,255,.28);color:#fff}
+
+/* Portada: la foto se ve clara y brillante; el texto blanco se apoya en una sombra suave a la izquierda */
+.hero::before{background:linear-gradient(90deg,rgba(5,40,61,.46) 0,rgba(5,40,61,.16) 40%,rgba(5,40,61,0) 64%),linear-gradient(180deg,rgba(5,40,61,.55) 0,rgba(5,40,61,.2) 14%,transparent 28%,transparent 66%,rgba(255,255,255,.6) 90%,#fff 100%)}
+.hero h1 span{color:#7dd3fc;text-shadow:0 2px 24px rgba(5,40,61,.55)}
+.sobretitulo,.sobretitulo i{color:#bfeaff}.sobretitulo i{background:#7dd3fc}
+.hero-buscar{background:rgba(6,45,70,.5);border-color:rgba(255,255,255,.4)}
+.hero-buscar input{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.5);color:#fff}
+.hero-buscar input:focus{background:rgba(255,255,255,.28);border-color:#fff;box-shadow:0 0 0 3px rgba(125,211,252,.5)}
+.hero-buscar input::placeholder{color:#dff2fb}
+.hero-buscar p,.hero-buscar label{color:#e3f3fb}
+.hero-confianza{background:#fff;border:1px solid var(--borde);color:var(--noche);box-shadow:0 18px 40px -24px rgba(7,60,100,.5);backdrop-filter:none}
+.hero-confianza svg{color:var(--cielo)}
+.titulo-seccion{color:var(--noche)}
+.clave{background:#e6f4fb;color:var(--noche)}
+
+/* Tarjetas, filtros, detalle */
+.foto{background:#cfe9f4}
+.filtros{background:#fff;border:1px solid var(--borde);backdrop-filter:none;box-shadow:0 16px 36px -26px rgba(7,60,100,.4)}
+.filtros input:focus,.filtros select:focus{background:#f1f8fd}
+.filtros .campo input,.filtros .campo select{background-color:#fff}
+.tarjeta{background:#fff;border:1px solid var(--borde);backdrop-filter:none;box-shadow:0 20px 44px -28px rgba(7,60,100,.4)}
+.tarjeta:hover{border-color:var(--cielo);box-shadow:0 28px 50px -26px rgba(14,165,233,.45)}
+.cuerpo h2 a{color:var(--noche)}
+.cuerpo p,.meta,.vacio,.aviso,.paginas,.campo small,td small{color:var(--suave)}
+.pie-t{color:var(--tinta)!important}
+.pie-t strong,.total strong,.kpi strong,.stock-kpi strong{color:var(--acento)}
+.chip{background:#dff4ff;color:#075985}
+.volver{color:var(--suave)}.volver:hover{color:var(--noche)}
+.detalle-info .arco{border-color:#fff;box-shadow:0 26px 44px -26px rgba(7,60,100,.5)}
+.datos span{background:#eef7fd;border:1px solid var(--borde);color:var(--noche)}
+.descripcion{color:var(--tinta)}
+.reserva{background:#fff;border:1px solid var(--borde);backdrop-filter:none}
+.turno{background:#fff;color:var(--tinta);border-color:var(--borde-fuerte)}
+.turno strong{color:var(--noche)}.turno span{color:var(--suave)}
+.turno.sel{background:#e0f4ff;border-color:var(--acento);box-shadow:inset 0 0 0 1px var(--acento)}
+.turno:hover:not(:disabled){background:#eef9ff;border-color:var(--cielo);color:var(--tinta)}
+
+/* Formularios y avisos */
+input,select,textarea{background:#fff;color:var(--tinta);border-color:var(--borde-fuerte)}
+input::placeholder,textarea::placeholder{color:#7890a2}
+input:focus,select:focus,textarea:focus{background:#fff;border-color:var(--cielo);box-shadow:0 0 0 3px rgba(56,189,248,.3)}
+select option{background:#fff;color:var(--noche)}
+.formulario{background:#fff;border:1px solid var(--borde);backdrop-filter:none}
+.angosto{background:#fff}
+fieldset{border-color:var(--borde)}
+legend{color:var(--acento)}
+.campo>span,.chk{color:var(--noche)}
+.alerta.error{color:#8a1c14;border-color:#f0a8a1;background:#fdecea}
+.alerta.ok{color:#0b5a38;border-color:#98d9b8;background:#e6f7ee}
+.alerta.espera,.cancel-nota.aviso{color:#6b4300;border-color:#efcb84;background:#fff4de}
+.alerta h3,.alerta a{color:inherit}
+.modal{background:rgba(8,36,56,.5)}
+.modal .formulario{background:#fff}
+
+/* Estados */
+.ins{background:#e8eef3;color:var(--tinta)}
+.ins-confirmed{color:#075985;background:#dff4ff}
+.ins-checked_in,.ins-publicada,.ins-disponible{color:#0b6b43;background:#dff7ea}
+.ins-ultimos_cupos{color:#8a5300;background:#fff1d6}
+.ins-agotado,.ins-inactiva{color:#b42318;background:#fde7e5}
+.ins.ins-cancelled{background:#b91c1c;color:#fff}
+
+/* Administración */
+.kpi,.stock-card,.reserva-card{background:#fff;border:1px solid var(--borde);backdrop-filter:none;box-shadow:0 18px 40px -30px rgba(7,60,100,.4)}
+.stock-kpi{background:#f4faff;border-color:var(--borde)}
+table{background:#fff;border-color:var(--borde)}
+th,td{border-bottom-color:rgba(11,42,66,.09)}
+th{background:#f1f8fd;color:var(--suave)}
+tbody tr:hover{background:#f6fbff}
+td.acc a{color:var(--acento)}td.acc a:hover{color:var(--noche)}
+.pestanas{background:#fff}
+.pestanas button{color:var(--tinta)}
+.pestanas button.activa{background:var(--menta);color:var(--tinta-boton)}
+.cancel-nota{background:#f4faff;border-color:var(--borde-fuerte);color:var(--tinta)}
+.exito-badge{background:#e6f7ee;color:#0b5a38;border-color:#98d9b8}
+.exito-lista li{background:#f4faff;border-color:var(--borde)}
+.sec.peligro{color:#b42318;border-color:#e8a29b}
+.sec.peligro:hover:not(:disabled){background:#fdecea;color:#b42318}
+.bitacora{background:#f7fbfe;color:#14303f;border-color:var(--borde)}
+.bitacora .l{border-bottom-color:rgba(11,42,66,.09)}
+.bitacora .ts,.bitacora .cid{color:#5b7487}
+.bitacora .INFO{color:#0b7a4b}.bitacora .WARN{color:#92580a}.bitacora .ERROR{color:#b42318}
+.bitacora .c-HTTP{color:#3e5568}.bitacora .c-CLIENTES{color:#0e7490}.bitacora .c-RESERVA{color:#0b7a4b}.bitacora .c-CHECKIN{color:#6d28d9}.bitacora .c-STOCK{color:#1d4ed8}.bitacora .c-BUS{color:#92580a}.bitacora .c-ADMIN{color:#0369a1}
+.pie{border-top-color:var(--borde)}.pie strong{color:var(--noche)}
+
+@media (max-width:1040px){
+  tbody tr{background:#fff;border-color:var(--borde)}tbody tr:hover{background:#fff}
+  td,td.nw,td:first-child,td.nom{border-bottom-color:rgba(11,42,66,.08)}
+}
+/* Celular: la foto queda como franja arriba (con la barra encima) y el resto de la portada va sobre blanco con texto oscuro */
+@media (max-width:820px){
+  .hero-foto,.hero .panorama{height:calc(var(--alto-barra) + 150px)}
+  .hero::before{height:calc(var(--alto-barra) + 150px);background:linear-gradient(180deg,rgba(5,40,61,.55) 0,rgba(5,40,61,.18) 45%,rgba(5,40,61,.04) 70%,#fff 100%)}
+  .hero{color:var(--tinta);padding-top:calc(var(--alto-barra) + 130px)}
+  .hero h1{color:var(--noche);text-shadow:none}
+  .hero h1 span{color:var(--acento);text-shadow:none}
+  .hero .lead{color:var(--tinta);text-shadow:none}
+  .sobretitulo,.sobretitulo i{color:var(--acento)}.sobretitulo i{background:var(--cielo)}
+  .datos-inicio{color:var(--suave)}.datos-inicio strong{color:var(--noche)}
+  .hero-buscar{background:#fff;border-color:var(--borde);box-shadow:0 20px 44px -28px rgba(7,60,100,.5);backdrop-filter:none}
+  .hero-buscar h2{color:var(--noche)}
+  .hero-buscar p,.hero-buscar label{color:var(--suave)}
+  .hero-buscar input{background:#fff;border-color:var(--borde-fuerte);color:var(--tinta)}
+  .hero-buscar input::placeholder{color:#7890a2}
+  .hero-buscar input:focus{background:#fff;border-color:var(--cielo)}
+  .hero-buscar button.enlace{color:var(--acento);background:none}
+  .hero-buscar button.enlace:hover:not(:disabled){color:var(--noche);background:none}
+}
+
+@media (max-width:820px){.barra{grid-template-columns:minmax(0,1fr) auto}.barra-der{flex-wrap:nowrap}}
+@media (max-width:560px){.rol{display:none}.marca{font-size:1.05rem}}
+.resultado-busqueda{text-align:center;color:var(--suave);margin:10px 0 26px}
+.resultado-busqueda .enlace{padding:2px 6px}
+.tabla-clientes th,.tabla-clientes td{padding:12px 11px}
+.tabla-clientes th{white-space:nowrap}
+.tabla-clientes td.nom{min-width:170px}
+.tabla-clientes td small{margin-left:4px}

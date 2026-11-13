@@ -9,7 +9,8 @@ export default function EditarAtraccion() {
   const [h, setH] = useState({ hora: '09:00', cupo: 10 });
   const cargar = () => api('GET', `/admin/atracciones/${id}`).then((x) => {
     setA(x); setF({ nombre: x.nombre ?? '', descripcion: x.descripcion ?? '', descripcion_corta: x.descripcion_corta ?? '', punto_encuentro: x.punto_encuentro ?? '', duracion_horas: x.duracion_horas ?? 2,
-      adulto: x.tarifas?.ADULTO ?? '', nino: x.tarifas?.NINO ?? '', foto: x.fotos?.[0]?.url ?? '' }); setErr(null);
+      adulto: x.tarifas?.ADULTO ?? '', nino: x.tarifas?.NINO ?? '', foto: x.fotos?.[0]?.url ?? '',
+      cancelacion_gratuita: !!x.cancelacion_gratuita, horas_cancelacion: x.horas_cancelacion ?? 24 }); setErr(null);
   }).catch(setErr);
   useEffect(() => { cargar(); }, [id]); // eslint-disable-line
   const c = (k) => ({ value: f[k], onChange: (e) => setF({ ...f, [k]: e.target.value }) });
@@ -18,7 +19,8 @@ export default function EditarAtraccion() {
     e.preventDefault(); setErr(null); setOk(''); setEnv(true);
     try {
       const body = { nombre: f.nombre.trim(), descripcion: f.descripcion.trim(), descripcion_corta: f.descripcion_corta.trim() || undefined, punto_encuentro: f.punto_encuentro.trim() || undefined, duracion_horas: Number(f.duracion_horas),
-        tarifas: { ADULTO: Number(f.adulto), ...(f.nino !== '' && { NINO: Number(f.nino) }) } };
+        tarifas: { ADULTO: Number(f.adulto), ...(f.nino !== '' && { NINO: Number(f.nino) }) },
+        cancelacion_gratuita: !!f.cancelacion_gratuita, horas_cancelacion: Math.max(0, Math.round(Number(f.horas_cancelacion) || 0)) };
       if (f.foto.trim() && f.foto.trim() !== (a.fotos?.[0]?.url ?? '')) body.fotos = [{ url: f.foto.trim(), alt: f.nombre.trim() }];
       await api('PUT', `/admin/atracciones/${id}`, { body }); setOk('Cambios guardados.'); await cargar();
     } catch (x) { setErr(x); } finally { setEnv(false); }
@@ -42,6 +44,12 @@ export default function EditarAtraccion() {
             <Campo etiqueta="Punto de encuentro"><input {...c('punto_encuentro')} /></Campo></div>
           <Campo etiqueta="URL de la foto principal" ayuda="Pega la dirección de una imagen real (https://…)."><input type="url" {...c('foto')} /></Campo>
           {f.foto && <img className="miniatura" src={f.foto} alt="Vista previa" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
+        </fieldset>
+        <fieldset><legend>Política de cancelación</legend>
+          <label className="chk"><input type="checkbox" checked={!!f.cancelacion_gratuita} onChange={(e) => setF({ ...f, cancelacion_gratuita: e.target.checked })} /> Permitir que el turista cancele su reserva (reembolso simulado del 100%)</label>
+          <Campo etiqueta="Horas mínimas de anticipación" ayuda="Se puede cancelar hasta estas horas antes del turno y mientras no haya check-in. La regla oficial del RDA2 es 24.">
+            <input type="number" min="0" max="720" step="1" disabled={!f.cancelacion_gratuita} {...c('horas_cancelacion')} /></Campo>
+          {!f.cancelacion_gratuita && <p className="meta">Con esta opción apagada, el turista no podrá cancelar desde la web y verá «Esta atracción no admite cancelación». Booking sí puede cancelar (solo se bloquea tras el check-in).</p>}
         </fieldset>
         <fieldset><legend>Tarifas (USD)</legend>
           <div className="fila"><Campo etiqueta="Adulto"><input type="number" min="0" step="0.01" required {...c('adulto')} /></Campo><Campo etiqueta="Niño (opcional)"><input type="number" min="0" step="0.01" {...c('nino')} /></Campo></div>

@@ -275,11 +275,16 @@ try {
     const again = await http('POST', `/atracciones/reservas/${toCancel.reservation_id}/cancel`, { key: KEY, body: {} }); eq(again.status, 200); eq(again.json.reembolso_id, c.json.reembolso_id);
     eq((await http('GET', `/atracciones/PRhu4UBTWPBC/disponibilidad?date=${d}`)).json.time_slots[0].available_slots, 20); // no libera dos veces
   });
-  await t('CLIENTE no puede cancelar una atracción sin cancelación gratuita (409); sin rol no puede usar SAGA_ORCHESTRATOR (403)', async () => {
+  await t('turista (web) no puede cancelar una atracción sin cancelación gratuita (409); Booking (socio) solo se bloquea por check-in; sin rol no puede usar SAGA_ORCHESTRATOR (403)', async () => {
     const d = addDays(10); const r = await post({ atraccion_id: 'GYmalecon001', fecha: d, slot_id: slotOf(d, '10:30'), hora: '10:30', adult_count: 1,
       customer: { full_name: 'Ana Paz', email: 'turista1@mail.com', phone: '0991234567', document_type: 'CEDULA', document_id: cedula(4000002) }, payment_method: 'TRANSFERENCIA' });
-    const c = await http('POST', `/atracciones/reservas/${r.json.reservation_id}/cancel`, { key: KEY, body: { solicitante: 'CLIENTE' } }); eq(c.status, 409); eq(c.json.code, 'CANCELLATION_NOT_ALLOWED');
+    const c = await http('POST', `/atracciones/reservas/${r.json.reservation_id}/cancel`, { token: clientToken, body: { solicitante: 'CLIENTE' } }); eq(c.status, 409); eq(c.json.code, 'CANCELLATION_NOT_ALLOWED'); eq(c.json.title, 'Cancelación No Permitida');
     const own = await http('POST', `/atracciones/reservas/${r.json.reservation_id}/cancel`, { token: clientToken, body: { solicitante: 'SAGA_ORCHESTRATOR' } }); eq(own.status, 403);
+    // Booking (credencial de socio): sin la regla de cancelación gratuita ni de plazo; la respuesta trae reembolso y restitución de stock.
+    const socio = await http('POST', `/atracciones/reservas/${r.json.reservation_id}/cancel`, { key: KEY, body: { solicitante: 'CLIENTE' } }); eq(socio.status, 200); eq(socio.json.status, 'CANCELLED');
+    eq(socio.json.cancel_code, socio.json.reembolso_id); eq(socio.json.refund.status, 'PROCESSED'); eq(socio.json.refund.amount, socio.json.monto_reembolsado); eq(socio.json.stock_restoration.status, 'RESTORED'); eq(socio.json.stock_restoration.restored_spots, 1);
+    eq(socio.json.message, 'Reserva cancelada exitosamente y cupos restituidos.'); valid('ReservaConfirmadaResponseV2', socio.json);
+    eq((await http('POST', `/reservas/${r.json.reservation_id}/cancel`, { key: KEY, body: {} })).status, 200);   // alias sin /atracciones (idempotente)
   });
   await t('check-in: documento incorrecto 403, correcto 200 CHECKED_IN, repetido 200 idempotente, luego no cancelable', async () => {
     const d = addDays(11); const doc = cedula(5000001);
@@ -293,6 +298,7 @@ try {
     eq(ci.status, 200); eq(ci.json.estado, 'CHECKED_IN'); eq(ci.json.titular_documento, doc);
     const ci2 = await http('POST', `/atracciones/reservas/${id}/checkin`, { key: KEY, body: { documento_identidad: doc } }); eq(ci2.status, 200); eq(ci2.json.hora_checkin, ci.json.hora_checkin);
     eq((await http('POST', `/atracciones/reservas/${id}/cancel`, { key: KEY, body: { solicitante: 'ADMIN' } })).json.code, 'RESERVATION_NOT_CANCELLABLE');
+    const sc = await http('POST', `/atracciones/reservas/${id}/cancel`, { key: KEY, body: {} }); eq(sc.status, 409); eq(sc.json.title, 'Cancelación No Permitida');   // Booking tampoco puede cancelar tras el check-in
     const cx = await http('POST', `/atracciones/reservas/${toCancel.reservation_id}/checkin`, { key: KEY, body: { documento_identidad: reserva().customer.document_id } }); ok([403, 409].includes(cx.status));
   });
 

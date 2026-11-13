@@ -324,6 +324,22 @@ export class AdminService {
          FROM usuario u LEFT JOIN usuario_rol ur ON ur.usu_id=u.usu_id LEFT JOIN rol r ON r.rol_id=ur.rol_id WHERE ${w} GROUP BY u.usu_id ORDER BY u.usu_creado_en DESC LIMIT $${params.length - 1} OFFSET $${params.length}`, params);
     return { metadata: pageMeta(rows[0]?.total ?? 0, p), data: rows.map(({ total, ...r }) => r) };
   }
+  /** Clientes (turistas) que han reservado, vengan de la web o de Booking. Solo lectura: se arma desde el registro de cliente y sus reservas. */
+  async listClientes(q: Record<string, any>) {
+    const p = pageQuery(q, 20, 100); const params: unknown[] = []; let w = 'TRUE';
+    if (q.q) { params.push(like(q.q)); w = `(c.cli_nombre ILIKE $1 OR c.cli_correo ILIKE $1 OR c.cli_documento ILIKE $1 OR c.cli_telefono ILIKE $1)`; }
+    params.push(p.limit, p.offset);
+    const rows = await this.db.query(
+      `SELECT c.cli_id AS id, c.cli_tipo_documento AS tipo_documento, c.cli_documento AS documento, c.cli_nombre AS nombre, c.cli_correo AS email, c.cli_telefono AS telefono, c.cli_creado_en AS creado_en,
+              COUNT(r.res_id)::int AS reservas,
+              COUNT(r.res_id) FILTER (WHERE e.est_codigo IN ('PENDING','CONFIRMED'))::int AS vigentes,
+              COUNT(r.res_id) FILTER (WHERE e.est_codigo IN ('CHECKED_IN','COMPLETED'))::int AS checkins,
+              COUNT(r.res_id) FILTER (WHERE e.est_codigo='CANCELLED')::int AS canceladas,
+              MAX(r.res_creado_en) AS ultima_reserva, COUNT(*) OVER() AS total
+         FROM cliente c LEFT JOIN reserva r ON r.cli_id=c.cli_id LEFT JOIN estado_reserva e ON e.est_id=r.est_id
+        WHERE ${w} GROUP BY c.cli_id ORDER BY MAX(r.res_creado_en) DESC NULLS LAST, c.cli_id DESC LIMIT $${params.length - 1} OFFSET $${params.length}`, params);
+    return { metadata: pageMeta(rows[0]?.total ?? 0, p), data: rows.map(({ total, ...r }) => r) };
+  }
   async patchUsuario(id: number, body: any, selfId?: number) {
     if (id === selfId && (body.activo === false || (Array.isArray(body.roles) && !body.roles.includes('ADMIN'))))
       throw conflict('No puede desactivarse ni quitarse el rol ADMIN a sí mismo.', 'SELF_LOCKOUT');

@@ -12,12 +12,12 @@ const portadas = import.meta.glob('../assets/portada.{jpg,jpeg,png,webp}', { eag
 const fotoPortada = Object.values(portadas)[0];
 
 export default function Catalogo() {
-  const [f, setF] = useState({ q: '', ciudad: '' });
+  const [f, setF] = useState({ q: '' });
   const [d, setD] = useState(null); const [err, setErr] = useState(null); const [cargando, setCargando] = useState(true);
   const ultima = useRef(0); const primera = useRef(true);
   const buscar = (p = 1, filtros = f) => {
     const n = ++ultima.current; setErr(null);
-    api('GET', '/atracciones', { query: { q: filtros.q, ciudad: filtros.ciudad, page: p, limit: 9 }, auth: false })
+    api('GET', '/atracciones', { query: { q: filtros.q, page: p, limit: 9 }, auth: false })
       .then((r) => { if (n === ultima.current) setD(r); })
       .catch((x) => { if (n === ultima.current) setErr(x); })
       .finally(() => { if (n === ultima.current) setCargando(false); });
@@ -28,15 +28,9 @@ export default function Catalogo() {
     if (primera.current) { primera.current = false; return undefined; }
     const t = setTimeout(() => buscar(1, f), 350);
     return () => clearTimeout(t);
-  }, [f.q, f.ciudad]); // eslint-disable-line
+  }, [f.q]); // eslint-disable-line
   const irLista = () => document.getElementById('escenario')?.scrollIntoView({ behavior: 'smooth' });
   const total = d?.metadata?.total_results;
-  const campos = (
-    <>
-      <input placeholder="Buscar tours o parques…" value={f.q} onChange={(e) => setF({ ...f, q: e.target.value })} aria-label="Buscar" />
-      <input placeholder="Ciudad (ej. Quito)" value={f.ciudad} onChange={(e) => setF({ ...f, ciudad: e.target.value })} aria-label="Ciudad" />
-    </>
-  );
   return (
     <>
       <section className="hero" aria-labelledby="titulo-inicio">
@@ -52,10 +46,9 @@ export default function Catalogo() {
         <form className="hero-buscar" role="search" onSubmit={(e) => { e.preventDefault(); buscar(1); irLista(); }}>
           <h2>¿A dónde vamos?</h2>
           <p>Escribe y los resultados aparecen al instante.</p>
-          <label>Atracción<input placeholder="Tour, parque, museo…" value={f.q} onChange={(e) => setF({ ...f, q: e.target.value })} aria-label="Buscar en portada" /></label>
-          <label>Ciudad<input placeholder="Ej. Quito, Guayaquil…" value={f.ciudad} onChange={(e) => setF({ ...f, ciudad: e.target.value })} aria-label="Ciudad en portada" /></label>
+          <label>Atracción<input type="search" placeholder="Tour, parque, museo, ciudad…" value={f.q} onChange={(e) => setF({ q: e.target.value })} aria-label="Buscar atracciones" /></label>
           <button type="submit" className="menta flecha">Buscar</button>
-          <button type="button" className="enlace" onClick={() => setF({ q: '', ciudad: '' })}>Limpiar búsqueda</button>
+          <button type="button" className="enlace" onClick={() => setF({ q: '' })}>Limpiar búsqueda</button>
         </form>
 
         <ul className="hero-confianza" aria-label="Ventajas">
@@ -65,13 +58,13 @@ export default function Catalogo() {
 
       <section className="escenario contenedor" id="escenario" aria-label="Catálogo de atracciones">
         <h2 className="titulo-seccion">Atracciones</h2>
-        <form className="filtros" role="search" onSubmit={(e) => { e.preventDefault(); buscar(1); }}>
-          {campos}
-          <button type="submit">Buscar</button>
-          <button type="button" className="sec" onClick={() => setF({ q: '', ciudad: '' })}>Limpiar</button>
-        </form>
+        {f.q.trim() && (
+          <p className="resultado-busqueda" role="status">
+            {total != null ? `${total} ${total === 1 ? 'resultado' : 'resultados'}` : 'Buscando…'} para «{f.q.trim()}» <button type="button" className="enlace" onClick={() => setF({ q: '' })}>Limpiar</button>
+          </p>
+        )}
         <Error_ e={err} />
-        {cargando && !d ? <Cargando /> : !d?.data?.length ? <p className="vacio">No se encontraron atracciones con esos filtros. Prueba con otra ciudad o limpia la búsqueda.</p> : (
+        {cargando && !d ? <Cargando /> : !d?.data?.length ? <p className="vacio">No se encontraron atracciones con esa búsqueda. Prueba con otra palabra (nombre o ciudad) o limpia la búsqueda.</p> : (
           <div className="rejilla">
             {d.data.map((a) => (
               <article key={a.id} className="tarjeta">

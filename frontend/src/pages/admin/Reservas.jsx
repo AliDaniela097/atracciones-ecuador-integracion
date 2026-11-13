@@ -1,16 +1,28 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { api, usd } from '../../api.js';
 import { Campo, Cargando, Error_, Insignia, Ok, Paginacion } from '../../components/ui.jsx';
 import { useSesion } from '../../App.jsx';
 
+const VACIO = { q: '', estado: '', atraccion: '', fecha: '' };
 const AVISO = { ENVIADO: 'Booking fue notificado.', PENDIENTE_REINTENTO: 'Booking no respondió; se reintentará automáticamente.', NO_CONFIGURADO: 'Check-in guardado; la notificación a Booking no está configurada.', RECHAZADO: 'Check-in guardado, pero Booking rechazó la notificación.' };
 
 export default function Reservas() {
   const s = useSesion();
-  const [f, setF] = useState({ q: '', estado: '' }); const [d, setD] = useState(null); const [err, setErr] = useState(null); const [ok, setOk] = useState('');
+  const [f, setF] = useState(VACIO); const [atrs, setAtrs] = useState([]); const primera = useRef(true); const ultima = useRef(0); const [d, setD] = useState(null); const [err, setErr] = useState(null); const [ok, setOk] = useState('');
   const [sel, setSel] = useState(null); const [form, setForm] = useState({ documento: '', asistentes: '', obs: '' }); const [mErr, setMErr] = useState(null); const [env, setEnv] = useState(false);
-  const cargar = (page = 1) => api('GET', '/admin/reservas', { query: { q: f.q, estado: f.estado, page, limit: 15 } }).then((r) => { setD(r); setErr(null); }).catch(setErr);
-  useEffect(() => { cargar(); }, []); // eslint-disable-line
+  // El backend filtra por texto (código, cliente, correo, cédula), estado, atracción (código exacto) y fecha.
+  const cargar = (page = 1, fl = f) => {
+    const n = ++ultima.current;
+    return api('GET', '/admin/reservas', { query: { page, limit: 15, ...(fl.q.trim() && { q: fl.q.trim() }), ...(fl.estado && { estado: fl.estado }), ...(fl.atraccion && { atraccion: fl.atraccion }), ...(fl.fecha && { fecha: fl.fecha }) } })
+      .then((r) => { if (n === ultima.current) { setD(r); setErr(null); } }).catch((e) => { if (n === ultima.current) setErr(e); });
+  };
+  useEffect(() => { api('GET', '/admin/atracciones', { query: { limit: 100 } }).then((r) => setAtrs(r.data ?? [])).catch(() => {}); }, []);
+  // El texto busca solo, un momento después de la última tecla; los combos y la fecha buscan al instante.
+  useEffect(() => {
+    if (primera.current) { primera.current = false; cargar(1); return undefined; }
+    const t = setTimeout(() => cargar(1), 400); return () => clearTimeout(t);
+  }, [f.q]); // eslint-disable-line
+  const filtrar = (cambio) => { const nuevo = { ...f, ...cambio }; setF(nuevo); cargar(1, nuevo); };
 
   const abrir = (r) => { setSel(r); setMErr(null); setForm({ documento: '', asistentes: String(r.adult_count + r.child_count), obs: '' }); };
   const confirmar = async (e) => {
@@ -29,11 +41,16 @@ export default function Reservas() {
   return (
     <section>
       <h1>Reservas y check-in</h1>
-      <p className="meta">Busca al turista por código de reserva, cédula o correo. Al confirmar la asistencia, la reserva pasa de RESERVADO a CONFIRMADO_ASISTIDO y se avisa a Booking.</p>
-      <form className="filtros" onSubmit={(e) => { e.preventDefault(); cargar(1); }}>
-        <input placeholder="Código de reserva, cédula, correo o nombre" value={f.q} onChange={(e) => setF({ ...f, q: e.target.value })} aria-label="Buscar reserva" />
-        <select value={f.estado} onChange={(e) => setF({ ...f, estado: e.target.value })} aria-label="Estado"><option value="">Todos los estados</option><option value="CONFIRMED">RESERVADO (pendiente de asistencia)</option><option value="CHECKED_IN">CONFIRMADO_ASISTIDO</option><option value="CANCELLED">CANCELADA</option></select>
+      <p className="meta">Busca al turista por código de reserva, cédula, correo o nombre del cliente. Para ver las reservas de una atracción o de un día, usa los filtros. Al confirmar la asistencia, la reserva pasa de RESERVADO a CONFIRMADO_ASISTIDO y se avisa a Booking.</p>
+      <form className="filtros" role="search" onSubmit={(e) => { e.preventDefault(); cargar(1); }}>
+        <Campo etiqueta="Cliente o código"><input type="search" placeholder="Código, cédula o nombre…" value={f.q} onChange={(e) => setF({ ...f, q: e.target.value })} aria-label="Buscar reserva por código, cédula, correo o nombre del cliente" /></Campo>
+        <Campo etiqueta="Atracción">
+          <select value={f.atraccion} onChange={(e) => filtrar({ atraccion: e.target.value })} aria-label="Filtrar por atracción"><option value="">Todas las atracciones</option>{atrs.map((a) => <option key={a.id} value={a.codigo}>{a.nombre}</option>)}</select>
+        </Campo>
+        <Campo etiqueta="Estado"><select value={f.estado} onChange={(e) => filtrar({ estado: e.target.value })} aria-label="Estado"><option value="">Todos los estados</option><option value="CONFIRMED">RESERVADO (pendiente de asistencia)</option><option value="CHECKED_IN">CONFIRMADO_ASISTIDO</option><option value="CANCELLED">CANCELADA</option></select></Campo>
+        <Campo etiqueta="Fecha de la visita"><input type="date" value={f.fecha} onChange={(e) => filtrar({ fecha: e.target.value })} aria-label="Filtrar por fecha de la visita" /></Campo>
         <button>Buscar</button>
+        {(f.q || f.estado || f.atraccion || f.fecha) && <button type="button" className="sec" onClick={() => { setF(VACIO); cargar(1, VACIO); }}>Limpiar filtros</button>}
       </form>
       <Ok>{ok}</Ok><Error_ e={err} />
       {!d ? <Cargando /> : !d.data.length ? <p className="vacio">No hay reservas con esos criterios.</p> : (
